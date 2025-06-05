@@ -1,14 +1,11 @@
 package postgres
 
 import (
-	"fmt"
-
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
 )
 
 func NewConnection(dsn string, hasHealthCheck bool) (*sqlx.DB, error) {
-	fmt.Println("dsn", dsn)
 	db, err := sqlx.Connect("postgres", dsn)
 	if err != nil {
 		return nil, err
