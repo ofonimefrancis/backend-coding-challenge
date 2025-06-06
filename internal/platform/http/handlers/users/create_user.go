@@ -31,12 +31,14 @@ type createUserResponse struct {
 func (h *Handler) CreateUser(w http.ResponseWriter, r *http.Request) {
 	var req domainUser.CreateUserRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.logger.Error("[create_user_handler] Invalid JSON", "error", err)
 		h.responseWriter.WriteError(w, "Invalid JSON", http.StatusBadRequest)
 		return
 	}
 
 	savedUser, err := h.userService.CreateUser(r.Context(), req)
 	if err != nil {
+		h.logger.Error("[create_user_handler] Failed to create user", "error", err)
 		h.handleCreateUserServiceError(w, err)
 		return
 	}
@@ -60,6 +62,6 @@ func (h *Handler) handleCreateUserServiceError(w http.ResponseWriter, err error)
 		h.responseWriter.WriteError(w, appErr.Message, appErr.StatusCode)
 		return
 	}
-
+	h.logger.Error("[create_user_handler] Internal server error", "error", err)
 	h.responseWriter.WriteError(w, "Internal server error", http.StatusInternalServerError)
 }

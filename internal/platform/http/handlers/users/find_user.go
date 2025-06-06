@@ -11,6 +11,7 @@ func (h *Handler) GetUser(w http.ResponseWriter, r *http.Request) {
 
 	user, err := h.userService.FindUserByID(r.Context(), id)
 	if err != nil {
+		h.logger.Error("Failed to get user by id", "error", err)
 		h.responseWriter.WriteError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}

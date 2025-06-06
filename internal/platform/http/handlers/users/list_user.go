@@ -3,17 +3,17 @@ package users
 import (
 	"encoding/json"
 	"net/http"
-	"net/url"
 	"strconv"
+	"thermondo/internal/domain/users"
 )
 
 func (h *Handler) ListUsers(w http.ResponseWriter, r *http.Request) {
 	email := r.URL.Query().Get("email")
 
-	// If email provided, find that specific user
 	if email != "" {
 		user, err := h.userService.FindUserByEmail(r.Context(), email)
 		if err != nil {
+			h.logger.Error("Failed to get user by email", "error", err)
 			http.Error(w, "User not found", http.StatusNotFound)
 			return
 		}
@@ -23,6 +23,7 @@ func (h *Handler) ListUsers(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Parse pagination parameters
+	//TODO: limit and page should be constants set in the config
 	page := 1
 	limit := 20 // Default page size
 
@@ -39,8 +40,10 @@ func (h *Handler) ListUsers(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get paginated users
+	var users []*users.User
 	users, total, err := h.userService.ListUsers(r.Context(), page, limit)
 	if err != nil {
+		h.logger.Error("Failed to get users", "error", err)
 		http.Error(w, "Failed to get users", http.StatusInternalServerError)
 		return
 	}
@@ -58,13 +61,4 @@ func (h *Handler) ListUsers(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(response)
-}
-
-func getIntQueryParam(query url.Values, key string, defaultValue int) int {
-	if value := query.Get(key); value != "" {
-		if intValue, err := strconv.Atoi(value); err == nil && intValue > 0 {
-			return intValue
-		}
-	}
-	return defaultValue
 }
