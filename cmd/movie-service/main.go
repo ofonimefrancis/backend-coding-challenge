@@ -2,53 +2,65 @@ package main
 
 import (
 	"context"
-	"fmt"
-	"log"
 	"log/slog"
 	"os"
 	"thermondo/config"
+	"thermondo/internal/domain/shared"
 	"thermondo/internal/pkg/postgres"
 	"thermondo/internal/pkg/server"
+	userHandlers "thermondo/internal/platform/http/handlers/users"
+	"thermondo/internal/platform/http/rest"
+	"thermondo/internal/platform/repository"
+	userService "thermondo/internal/platform/service/user"
 )
 
 func main() {
 	cfg, err := config.LoadConfig()
 	if err != nil {
-		log.Fatalf("Failed to load configuration: %v", err)
+		slog.Error("Failed to load config", slog.String("error", err.Error()))
+		os.Exit(1)
 	}
 
-	fmt.Println("cfg", cfg)
-	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
-		Level:     slog.LevelInfo,
-		AddSource: true,
-	}))
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 
-	httpServer, err := server.NewServer(
-		cfg,
-		logger,
-	)
-	if err != nil {
-		log.Fatalf("Failed to create server: %v", err)
-	}
-
+	// Database
 	db, err := postgres.NewConnection(cfg.Database.DSN, cfg.Database.HealthCheck)
 	if err != nil {
-		log.Fatalf("Failed to connect to database: %v", err)
+		logger.Error("Failed to connect to database", slog.String("error", err.Error()))
+		os.Exit(1)
 	}
 	defer db.Close()
 
-	db.SetMaxIdleConns(cfg.Database.MaxIdleConns)
-	db.SetMaxOpenConns(cfg.Database.MaxOpenConns)
+	// Repositories
+	userRepo := repository.NewUserRepository(db)
+	idGenerator := shared.NewULIDsGenerator()
+	timeProvider := shared.NewTimeProvider()
 
-	// setup individual services and repository
+	userService := userService.NewUserService(userRepo, idGenerator, timeProvider)
+	userHandler := userHandlers.NewHandler(userService, logger)
 
-	// Run the server
-	ctx := context.Background()
-	if err := httpServer.Run(ctx); err != nil {
-		logger.Error("Server execution failed",
-			slog.String("error", err.Error()),
-			slog.String("addr", httpServer.Addr()),
-		)
+	// Router with all handlers
+	appRouter := rest.NewRouter(
+		logger,
+		rest.WithCORS(rest.DefaultCORSOptions()),
+		rest.WithHandlers(
+			userHandler,
+		),
+	)
+
+	// Server
+	srv, err := server.NewServer(
+		cfg,
+		logger,
+		server.WithRouter(appRouter),
+	)
+	if err != nil {
+		logger.Error("Failed to create server", slog.String("error", err.Error()))
+		os.Exit(1)
+	}
+
+	if err := srv.Run(context.Background()); err != nil {
+		logger.Error("Server failed", slog.String("error", err.Error()))
 		os.Exit(1)
 	}
 }

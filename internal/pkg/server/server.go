@@ -1,3 +1,4 @@
+// server/server.go
 package server
 
 import (
@@ -12,9 +13,6 @@ import (
 	"syscall"
 	"thermondo/config"
 	"time"
-
-	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
 )
 
 var (
@@ -38,6 +36,11 @@ type HealthChecker interface {
 	HealthCheck(ctx context.Context) error
 }
 
+// RouterProvider defines the interface for providing HTTP handlers
+type RouterProvider interface {
+	Handler() http.Handler
+}
+
 // Server represents an HTTP server with graceful shutdown capabilities
 type Server struct {
 	httpServer    *http.Server
@@ -45,20 +48,11 @@ type Server struct {
 	config        config.Configuration
 	state         ServerState
 	healthChecker HealthChecker
+	router        RouterProvider
 
 	// Channels for coordinating server lifecycle
 	shutdownCh chan struct{}
 	doneCh     chan error
-}
-
-// ServerOption defines functional options for server configuration
-type ServerOption func(*Server)
-
-// WithHealthChecker sets a custom health checker
-func WithHealthChecker(hc HealthChecker) ServerOption {
-	return func(s *Server) {
-		s.healthChecker = hc
-	}
 }
 
 // NewServer creates a new HTTP server instance with the given configuration
@@ -86,10 +80,15 @@ func NewServer(conf config.Configuration, logger *slog.Logger, opts ...ServerOpt
 		opt(server)
 	}
 
+	// Ensure we have a router
+	if server.router == nil {
+		return nil, fmt.Errorf("%w: router provider is required", ErrInvalidConfiguration)
+	}
+
 	// Setup HTTP server with timeouts and secure defaults
 	server.httpServer = &http.Server{
 		Addr:         net.JoinHostPort(conf.Server.Host, conf.Server.Port),
-		Handler:      server.setupRouter(),
+		Handler:      server.router.Handler(),
 		ReadTimeout:  time.Duration(conf.Server.ReadTimeout) * time.Second,
 		WriteTimeout: time.Duration(conf.Server.WriteTimeout) * time.Second,
 		IdleTimeout:  time.Duration(conf.Server.IdleTimeout) * time.Second,
@@ -107,79 +106,6 @@ func validateConfig(conf config.Configuration) error {
 		return errors.New("shutdown timeout must be positive")
 	}
 	return nil
-}
-
-// setupRouter configures the HTTP router with middleware and routes
-func (s *Server) setupRouter() http.Handler {
-	r := chi.NewRouter()
-
-	// Standard middleware
-	r.Use(middleware.RequestID)
-	r.Use(middleware.RealIP)
-	r.Use(middleware.Recoverer)
-	r.Use(middleware.Timeout(30 * time.Second))
-
-	// Custom logging middleware
-	r.Use(func(next http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			start := time.Now()
-			ww := middleware.NewWrapResponseWriter(w, r.ProtoMajor)
-
-			defer func() {
-				s.logger.Info("HTTP request",
-					slog.String("method", r.Method),
-					slog.String("path", r.URL.Path),
-					slog.Int("status", ww.Status()),
-					slog.Duration("duration", time.Since(start)),
-					slog.String("remote_addr", r.RemoteAddr),
-				)
-			}()
-
-			next.ServeHTTP(ww, r)
-		})
-	})
-
-	// Routes
-	s.setupRoutes(r)
-
-	return r
-}
-
-// setupRoutes defines the application routes
-func (s *Server) setupRoutes(r chi.Router) {
-	r.Get("/health", s.handleHealth)
-	r.Get("/ready", s.handleReadiness)
-}
-
-// handleHealth provides a basic health check endpoint
-func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
-	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
-	defer cancel()
-
-	if s.healthChecker != nil {
-		if err := s.healthChecker.HealthCheck(ctx); err != nil {
-			s.logger.Error("Health check failed", slog.String("error", err.Error()))
-			http.Error(w, "Service Unavailable", http.StatusServiceUnavailable)
-			return
-		}
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	fmt.Fprintf(w, `{"status":"healthy","timestamp":"%s"}`, time.Now().UTC().Format(time.RFC3339))
-}
-
-// handleReadiness provides a readiness check endpoint
-func (s *Server) handleReadiness(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("handleReadiness", s.state)
-	if s.state != StateRunning {
-		http.Error(w, "Service Unavailable", http.StatusServiceUnavailable)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	fmt.Fprintf(w, `{"status":"ready","timestamp":"%s"}`, time.Now().UTC().Format(time.RFC3339))
 }
 
 // Start begins listening for HTTP requests
@@ -212,7 +138,6 @@ func (s *Server) Start(ctx context.Context) error {
 			return fmt.Errorf("failed to start server: %w", err)
 		}
 	case <-time.After(5 * time.Second):
-		// Server started successfully (no immediate error)
 		s.logger.Info("Server started successfully", slog.String("addr", s.httpServer.Addr))
 	}
 
@@ -228,11 +153,9 @@ func (s *Server) Shutdown(ctx context.Context) error {
 	s.state = StateStopping
 	s.logger.Info("Shutting down server gracefully")
 
-	// Create shutdown context with timeout
 	shutdownCtx, cancel := context.WithTimeout(ctx, time.Duration(s.config.Server.ShutdownTimeout)*time.Second)
 	defer cancel()
 
-	// Initiate graceful shutdown
 	if err := s.httpServer.Shutdown(shutdownCtx); err != nil {
 		s.logger.Error("Error during server shutdown", slog.String("error", err.Error()))
 		return fmt.Errorf("server shutdown failed: %w", err)
@@ -245,7 +168,6 @@ func (s *Server) Shutdown(ctx context.Context) error {
 
 // Run starts the server and handles graceful shutdown on OS signals
 func (s *Server) Run(ctx context.Context) error {
-	// Create cancellable context
 	runCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
@@ -267,7 +189,6 @@ func (s *Server) Run(ctx context.Context) error {
 		}
 	}
 
-	// Perform graceful shutdown
 	shutdownCtx, shutdownCancel := context.WithTimeout(
 		context.Background(),
 		time.Duration(s.config.Server.ShutdownTimeout)*time.Second,
@@ -288,4 +209,17 @@ func (s *Server) Addr() string {
 		return ""
 	}
 	return s.httpServer.Addr
+}
+
+// HealthStatus provides server health information
+func (s *Server) HealthStatus(ctx context.Context) error {
+	if s.healthChecker != nil {
+		return s.healthChecker.HealthCheck(ctx)
+	}
+	return nil
+}
+
+// IsReady returns whether the server is ready to handle requests
+func (s *Server) IsReady() bool {
+	return s.state == StateRunning
 }

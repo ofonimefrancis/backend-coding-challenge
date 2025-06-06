@@ -16,6 +16,15 @@ const (
 
 type UserID string
 
+type CreateUserRequest struct {
+	FirstName string `json:"first_name"`
+	LastName  string `json:"last_name"`
+	Email     string `json:"email"`
+	Password  string `json:"password"`
+	Role      string `json:"role"`
+	IsActive  *bool  `json:"is_active"` //optional
+}
+
 // User represents a user entity
 type User struct {
 	ID        UserID    `json:"id" db:"id"`
@@ -86,4 +95,8 @@ func (u *User) Validate() error {
 	}
 
 	return nil
+}
+
+func (u UserID) String() string {
+	return string(u)
 }
