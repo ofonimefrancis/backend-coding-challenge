@@ -63,7 +63,12 @@ func (s *userService) CreateUser(ctx context.Context, user users.CreateUserReque
 		return nil, err
 	}
 
-	return s.userRepository.Create(ctx, u)
+	savedUser, err := s.userRepository.Create(ctx, u)
+	if err != nil {
+		return nil, err
+	}
+
+	return savedUser, nil
 }
 
 func (s *userService) FindUserByID(ctx context.Context, id string) (*users.User, error) {

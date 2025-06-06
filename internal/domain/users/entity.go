@@ -1,6 +1,7 @@
 package users
 
 import (
+	"errors"
 	"net/mail"
 	"strings"
 	"thermondo/internal/domain/shared"
@@ -68,6 +69,11 @@ func NewUser(
 
 	for _, option := range options {
 		option(&user)
+	}
+
+	// Role validation after applying options
+	if user.Role != RoleUser && user.Role != RoleAdmin {
+		return nil, errors.New("invalid role")
 	}
 
 	return &user, nil
