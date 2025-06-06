@@ -1,6 +1,5 @@
--- PostgreSQL Users table with ULID - MINIMAL for CRUD
 CREATE TABLE users (
-    id CHAR(36) NOT NULL, -- ULID is 26 characters long, allowing some buffer
+    id VARCHAR(36) NOT NULL, -- ULID is 26 characters long, allowing some buffer
     first_name VARCHAR(100) NOT NULL,
     last_name VARCHAR(100) NOT NULL,
     email VARCHAR(255) NOT NULL,
@@ -18,7 +17,7 @@ CREATE TABLE users (
 );
 
 CREATE UNIQUE INDEX idx_users_email ON users (email);
-CREATE OR REPLACE FUNCTION update_updated_at_column()
+CREATE OR REPLACE FUNCTION update_users_updated_at_column()
 RETURNS TRIGGER AS $$
 BEGIN
     NEW.updated_at = NOW();
@@ -29,4 +28,4 @@ $$ language 'plpgsql';
 CREATE TRIGGER update_users_updated_at 
     BEFORE UPDATE ON users 
     FOR EACH ROW 
-    EXECUTE FUNCTION update_updated_at_column();
+    EXECUTE FUNCTION update_users_updated_at_column(); 
