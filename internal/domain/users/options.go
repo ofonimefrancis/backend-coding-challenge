@@ -6,6 +6,9 @@ type UserOption func(*User)
 
 func WithRole(role Role) UserOption {
 	return func(u *User) {
+		if role == "" {
+			role = RoleUser
+		}
 		u.Role = role
 	}
 }

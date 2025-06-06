@@ -31,11 +31,12 @@ func NewHandler(userService userService.UserService, logger *slog.Logger) *Handl
 
 func (h *Handler) RegisterRoutes(router chi.Router) {
 	router.Route("/users", func(r chi.Router) {
-		r.Get("/list", h.ListUsers)
+		r.Get("/", h.ListUsers)
 		r.Post("/", h.CreateUser)
 
 		//Resource routes (operate on single user by ID)
 		r.Route("/{id}", func(r chi.Router) {
+			r.Get("/", h.GetUser)
 		})
 	})
 }

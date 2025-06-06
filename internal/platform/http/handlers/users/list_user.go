@@ -4,8 +4,32 @@ import (
 	"encoding/json"
 	"net/http"
 	"strconv"
-	"thermondo/internal/domain/users"
+	"strings"
+	"time"
 )
+
+type ListUsersResponse struct {
+	Users      []UserResponse `json:"users"`
+	Pagination *Pagination    `json:"pagination"`
+}
+
+type Pagination struct {
+	Page       int `json:"page"`
+	Limit      int `json:"limit"`
+	Total      int `json:"total"`
+	TotalPages int `json:"total_pages"`
+}
+
+type UserResponse struct {
+	ID        string    `json:"id"`
+	FirstName string    `json:"first_name"`
+	LastName  string    `json:"last_name"`
+	Email     string    `json:"email"`
+	Role      string    `json:"role"`
+	IsActive  bool      `json:"is_active"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
 
 func (h *Handler) ListUsers(w http.ResponseWriter, r *http.Request) {
 	email := r.URL.Query().Get("email")
@@ -17,13 +41,22 @@ func (h *Handler) ListUsers(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "User not found", http.StatusNotFound)
 			return
 		}
+		userResponse := UserResponse{
+			ID:        strings.TrimSpace(user.ID.String()),
+			FirstName: user.FirstName,
+			LastName:  user.LastName,
+			Email:     user.Email,
+			Role:      string(user.Role),
+			IsActive:  user.IsActive,
+			CreatedAt: user.CreatedAt,
+			UpdatedAt: user.UpdatedAt,
+		}
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(user)
+		json.NewEncoder(w).Encode(userResponse)
 		return
 	}
 
 	// Parse pagination parameters
-	//TODO: limit and page should be constants set in the config
 	page := 1
 	limit := 20 // Default page size
 
@@ -35,12 +68,11 @@ func (h *Handler) ListUsers(w http.ResponseWriter, r *http.Request) {
 
 	if l := r.URL.Query().Get("limit"); l != "" {
 		if parsed, err := strconv.Atoi(l); err == nil && parsed > 0 && parsed <= 100 {
-			limit = parsed // Cap at 100 to prevent abuse
+			limit = parsed
 		}
 	}
 
 	// Get paginated users
-	var users []*users.User
 	users, total, err := h.userService.ListUsers(r.Context(), page, limit)
 	if err != nil {
 		h.logger.Error("Failed to get users", "error", err)
@@ -48,14 +80,27 @@ func (h *Handler) ListUsers(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Build response with pagination info
-	response := map[string]interface{}{
-		"users": users,
-		"pagination": map[string]interface{}{
-			"page":        page,
-			"limit":       limit,
-			"total":       total,
-			"total_pages": (total + limit - 1) / limit, // Ceiling division
+	var userResponses []UserResponse
+	for _, user := range users {
+		userResponses = append(userResponses, UserResponse{
+			ID:        strings.TrimSpace(user.ID.String()),
+			FirstName: user.FirstName,
+			LastName:  user.LastName,
+			Email:     user.Email,
+			Role:      string(user.Role),
+			IsActive:  user.IsActive,
+			CreatedAt: user.CreatedAt,
+			UpdatedAt: user.UpdatedAt,
+		})
+	}
+
+	response := ListUsersResponse{
+		Users: userResponses,
+		Pagination: &Pagination{
+			Page:       page,
+			Limit:      limit,
+			Total:      total,
+			TotalPages: (total + limit - 1) / limit,
 		},
 	}
 

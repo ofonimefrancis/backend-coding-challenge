@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	domainUser "thermondo/internal/domain/users"
 
@@ -11,15 +12,6 @@ import (
 var (
 	ErrUserNotCreated = errors.New("user was not created")
 )
-
-// Finder interface defines methods for finding users by ID or email
-type UserRepository interface {
-	Create(ctx context.Context, user *domainUser.User) (*domainUser.User, error)
-	FindByID(ctx context.Context, id domainUser.UserID) (*domainUser.User, error)
-	FindByEmail(ctx context.Context, email string) (*domainUser.User, error)
-	List(ctx context.Context, page, limit int) ([]*domainUser.User, error)
-	Count(ctx context.Context) (int, error)
-}
 
 type userRepository struct {
 	db *sqlx.DB
@@ -40,12 +32,15 @@ func (r *userRepository) FindByEmail(ctx context.Context, email string) (*domain
 	query := `SELECT id, first_name, last_name, email, role, is_active, created_at FROM users WHERE email = $1`
 	user := &domainUser.User{}
 	err := r.db.QueryRowContext(ctx, query, email).Scan(&user.ID, &user.FirstName, &user.LastName, &user.Email, &user.Role, &user.IsActive, &user.CreatedAt)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
 	return user, err
 }
 
 func (r *userRepository) Create(ctx context.Context, user *domainUser.User) (*domainUser.User, error) {
-	query := `INSERT INTO users (id, first_name, last_name, email, role, is_active, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7)`
-	result, err := r.db.ExecContext(ctx, query, user.ID, user.FirstName, user.LastName, user.Email, user.Role, user.IsActive, user.CreatedAt)
+	query := `INSERT INTO users (id, first_name, last_name, email, password, role, is_active, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`
+	result, err := r.db.ExecContext(ctx, query, user.ID, user.FirstName, user.LastName, user.Email, user.Password, user.Role, user.IsActive, user.CreatedAt)
 	if err != nil {
 		return nil, err
 	}
