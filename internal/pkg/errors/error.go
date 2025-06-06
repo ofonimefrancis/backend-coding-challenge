@@ -35,3 +35,11 @@ func NewInternalError(message string) *AppError {
 		Code:       "INTERNAL_ERROR",
 	}
 }
+
+func NewNotFoundError(message string) *AppError {
+	return &AppError{
+		Message:    message,
+		StatusCode: http.StatusNotFound,
+		Code:       "NOT_FOUND",
+	}
+}

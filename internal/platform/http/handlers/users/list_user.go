@@ -1,7 +1,6 @@
 package users
 
 import (
-	"encoding/json"
 	"net/http"
 	"strconv"
 	"strings"
@@ -37,8 +36,7 @@ func (h *Handler) ListUsers(w http.ResponseWriter, r *http.Request) {
 	if email != "" {
 		user, err := h.userService.FindUserByEmail(r.Context(), email)
 		if err != nil {
-			h.logger.Error("Failed to get user by email", "error", err)
-			http.Error(w, "User not found", http.StatusNotFound)
+			h.responseWriter.WriteError(w, "User not found", http.StatusNotFound)
 			return
 		}
 		userResponse := UserResponse{
@@ -51,8 +49,8 @@ func (h *Handler) ListUsers(w http.ResponseWriter, r *http.Request) {
 			CreatedAt: user.CreatedAt,
 			UpdatedAt: user.UpdatedAt,
 		}
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(userResponse)
+
+		h.responseWriter.WriteSuccess(w, userResponse, http.StatusOK)
 		return
 	}
 
@@ -75,8 +73,7 @@ func (h *Handler) ListUsers(w http.ResponseWriter, r *http.Request) {
 	// Get paginated users
 	users, total, err := h.userService.ListUsers(r.Context(), page, limit)
 	if err != nil {
-		h.logger.Error("Failed to get users", "error", err)
-		http.Error(w, "Failed to get users", http.StatusInternalServerError)
+		h.responseWriter.WriteError(w, "Failed to get users", http.StatusInternalServerError)
 		return
 	}
 
@@ -104,6 +101,5 @@ func (h *Handler) ListUsers(w http.ResponseWriter, r *http.Request) {
 		},
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	h.responseWriter.WriteSuccess(w, response, http.StatusOK)
 }

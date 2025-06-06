@@ -8,9 +8,11 @@ import (
 	"thermondo/internal/domain/shared"
 	"thermondo/internal/pkg/postgres"
 	"thermondo/internal/pkg/server"
+	movieHandlers "thermondo/internal/platform/http/handlers/movies"
 	userHandlers "thermondo/internal/platform/http/handlers/users"
 	"thermondo/internal/platform/http/rest"
 	"thermondo/internal/platform/repository"
+	movieService "thermondo/internal/platform/service/movies"
 	userService "thermondo/internal/platform/service/user"
 )
 
@@ -33,11 +35,17 @@ func main() {
 
 	// Repositories
 	userRepo := repository.NewUserRepository(db)
+	movieRepo := repository.NewMovieRepository(db)
 	idGenerator := shared.NewULIDsGenerator()
 	timeProvider := shared.NewTimeProvider()
 
+	// Services
 	userService := userService.NewUserService(userRepo, idGenerator, timeProvider)
+	movieService := movieService.NewMovieService(movieRepo, idGenerator, timeProvider, logger)
+
+	// Handlers
 	userHandler := userHandlers.NewHandler(userService, logger)
+	movieHandler := movieHandlers.NewHandler(movieService, logger)
 
 	// Router with all handlers
 	appRouter := rest.NewRouter(
@@ -45,6 +53,7 @@ func main() {
 		rest.WithCORS(rest.DefaultCORSOptions()),
 		rest.WithHandlers(
 			userHandler,
+			movieHandler,
 		),
 	)
 
