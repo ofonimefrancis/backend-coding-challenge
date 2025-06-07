@@ -25,8 +25,7 @@ func (w *Writer) WriteSuccess(resp http.ResponseWriter, data any, statusCode int
 
 func (w *Writer) WriteError(resp http.ResponseWriter, message string, statusCode int) {
 	errorResponse := ErrorResponse{
-		Error:  message,
-		Status: statusCode,
+		Error: message,
 	}
 
 	resp.Header().Set("Content-Type", "application/json")
@@ -38,8 +37,7 @@ func (w *Writer) WriteError(resp http.ResponseWriter, message string, statusCode
 }
 
 type ErrorResponse struct {
-	Error  string `json:"error"`
-	Status int    `json:"status"`
+	Error string `json:"error"`
 }
 
 type APIResponse struct {

@@ -28,3 +28,7 @@ func IsValid(rating string) bool {
 	}
 	return false
 }
+
+func (r Rating) String() string {
+	return string(r)
+}

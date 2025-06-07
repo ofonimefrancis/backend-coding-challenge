@@ -81,6 +81,7 @@ func (m *movieRepository) Save(ctx context.Context, movie *movies.Movie) (*movie
 	).Scan(&savedMovie.ID, &savedMovie.CreatedAt, &savedMovie.UpdatedAt)
 
 	if err != nil {
+		// Check if the error is a unique constraint violation
 		if pqErr, ok := err.(*pq.Error); ok && pqErr.Code == "23505" {
 			return nil, fmt.Errorf("movie with ID %s already exists", movie.ID)
 		}
@@ -120,11 +121,12 @@ func (m *movieRepository) GetByGenre(ctx context.Context, genre string, options 
 			   duration_mins, rating, language, country, budget, revenue,
 			   imdb_id, poster_url, created_at, updated_at
 		FROM movies 
-		WHERE genre = $1
+		WHERE genre ILIKE $1
 		ORDER BY %s %s
 		LIMIT $2 OFFSET $3`, m.getSortColumn(opts.SortBy), strings.ToUpper(opts.Order))
 
-	return m.queryMovies(ctx, query, genre, opts.Limit, opts.Offset)
+	searchPattern := "%" + strings.ToLower(genre) + "%"
+	return m.queryMovies(ctx, query, searchPattern, opts.Limit, opts.Offset)
 }
 
 func (m *movieRepository) GetByDirector(ctx context.Context, director string, options ...movies.SearchOption) ([]*movies.Movie, error) {
@@ -186,4 +188,36 @@ func (m *movieRepository) Exists(ctx context.Context, id movies.MovieID) (bool, 
 		return false, fmt.Errorf("failed to check movie existence: %w", err)
 	}
 	return exists, nil
+}
+
+// GetDB returns the database connection
+func (m *movieRepository) GetDB() *sqlx.DB {
+	return m.db
+}
+
+// ScanMovies scans the rows into a slice of movies
+func (m *movieRepository) ScanMovies(rows *sql.Rows) ([]*movies.Movie, error) {
+	var moviesList []*movies.Movie
+	for rows.Next() {
+		movie := &movies.Movie{}
+		err := rows.Scan(
+			&movie.ID, &movie.Title, &movie.Description, &movie.ReleaseYear,
+			&movie.Genre, &movie.Director, &movie.DurationMins, &movie.Rating,
+			&movie.Language, &movie.Country, &movie.Budget, &movie.Revenue,
+			&movie.IMDbID, &movie.PosterURL, &movie.CreatedAt, &movie.UpdatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan movie: %w", err)
+		}
+		moviesList = append(moviesList, movie)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating movies: %w", err)
+	}
+
+	return moviesList, nil
+}
+func (r *movieRepository) QueryContext(ctx context.Context, query string, args ...interface{}) (*sql.Rows, error) {
+	return r.db.QueryContext(ctx, query, args...)
 }

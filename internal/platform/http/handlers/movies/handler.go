@@ -22,8 +22,7 @@ const (
 )
 
 type Handler struct {
-	movieService movieService.Service
-
+	movieService   movieService.Service
 	logger         *slog.Logger
 	responseWriter *response.Writer
 }
@@ -46,7 +45,7 @@ func (h *Handler) RegisterRoutes(router chi.Router) {
 	router.Route("/movies", func(r chi.Router) {
 		r.Post("/", h.CreateMovie)
 		r.Get("/", h.GetAllMovies)
-		// r.Get("/search", h.SearchMovies)
+		r.Get("/search", h.SearchMovies)
 
 		r.Route("/{id}", func(r chi.Router) {
 			r.Get("/", h.GetMovie)
@@ -158,13 +157,6 @@ func (h *Handler) parseSearchParams(r *http.Request) (*movies.SearchMoviesReques
 			h.logger.Error("[parse_search_params] Min year cannot be greater than max year")
 			return nil, errors.New("min_year cannot be greater than max_year")
 		}
-	}
-
-	if searchParams.Query == "" && searchParams.Genre == "" &&
-		searchParams.Director == "" && searchParams.MinYear == nil &&
-		searchParams.MaxYear == nil {
-		h.logger.Error("[parse_search_params] At least one search parameter is required")
-		return nil, errors.New("at least one search parameter is required")
 	}
 
 	return searchParams, nil

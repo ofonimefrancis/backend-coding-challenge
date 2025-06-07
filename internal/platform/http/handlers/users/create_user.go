@@ -57,11 +57,17 @@ func (h *Handler) CreateUser(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) handleCreateUserServiceError(w http.ResponseWriter, err error) {
+	if errors.Is(err, domainUser.ErrUserAlreadyExists) {
+		h.responseWriter.WriteError(w, "user already exists", http.StatusConflict)
+		return
+	}
+
 	var appErr *appErrors.AppError
 	if errors.As(err, &appErr) {
 		h.responseWriter.WriteError(w, appErr.Message, appErr.StatusCode)
 		return
 	}
+
 	h.logger.Error("[create_user_handler] Internal server error", "error", err)
 	h.responseWriter.WriteError(w, "Internal server error", http.StatusInternalServerError)
 }

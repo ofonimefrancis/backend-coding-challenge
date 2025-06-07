@@ -1,6 +1,11 @@
 package movies
 
-import "context"
+import (
+	"context"
+	"database/sql"
+
+	"github.com/jmoiron/sqlx"
+)
 
 // Repository defines the interface for movie data access
 type Repository interface {
@@ -13,4 +18,7 @@ type Repository interface {
 	GetByGenre(ctx context.Context, genre string, options ...SearchOption) ([]*Movie, error)
 	GetByDirector(ctx context.Context, director string, options ...SearchOption) ([]*Movie, error)
 	GetByYearRange(ctx context.Context, startYear, endYear int, options ...SearchOption) ([]*Movie, error)
+	GetDB() *sqlx.DB
+	QueryContext(ctx context.Context, query string, args ...interface{}) (*sql.Rows, error)
+	ScanMovies(rows *sql.Rows) ([]*Movie, error)
 }

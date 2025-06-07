@@ -55,6 +55,8 @@ func (h *Handler) ListUsers(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Parse pagination parameters
+	//TODO: Remove magic numbers
+	// pagination defaults can be set in the config
 	page := 1
 	limit := 20 // Default page size
 

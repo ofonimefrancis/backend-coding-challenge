@@ -88,19 +88,19 @@ func NewMovie(
 		option(movie)
 	}
 
-	if err := movie.Validate(); err != nil {
+	if err := movie.Validate(timeProvider); err != nil {
 		return nil, err
 	}
 
 	return movie, nil
 }
 
-func (m *Movie) Validate() error {
+func (m *Movie) Validate(timeProvider shared.TimeProvider) error {
 	if m.Title == "" {
 		return ErrEmptyTitle
 	}
 
-	currentYear := time.Now().Year()
+	currentYear := timeProvider.Now().Year()
 	if m.ReleaseYear < FirstMovieYear || m.ReleaseYear > currentYear+MaxFutureYears {
 		return ErrInvalidYear
 	}

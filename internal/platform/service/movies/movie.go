@@ -115,8 +115,10 @@ func (m *movieService) SearchMovies(ctx context.Context, req movies.SearchMovies
 		movies.WithSort(req.SortBy, req.Order),
 	}
 
-	var moviesList []*movies.Movie
-	var err error
+	var (
+		moviesList []*movies.Movie
+		err        error
+	)
 
 	switch {
 	case req.Query != "":
@@ -151,6 +153,25 @@ func (m *movieService) SearchMovies(ctx context.Context, req movies.SearchMovies
 	}
 
 	return moviesList, totalCount, nil
+}
+
+func (m *movieService) getSortColumn(sortBy string) string {
+	switch sortBy {
+	case "title":
+		return "title"
+	case "release_year":
+		return "release_year"
+	case "created_at":
+		return "created_at"
+	case "updated_at":
+		return "updated_at"
+	case "genre":
+		return "genre"
+	case "director":
+		return "director"
+	default:
+		return "created_at"
+	}
 }
 
 func NewMovieService(movieRepo movies.Repository,

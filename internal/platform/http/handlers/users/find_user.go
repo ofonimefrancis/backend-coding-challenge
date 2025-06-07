@@ -15,6 +15,16 @@ func (h *Handler) GetUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	//TODO: convert to response DTO
-	h.responseWriter.WriteSuccess(w, user, http.StatusOK)
+	response := UserResponse{
+		ID:        user.ID.String(),
+		FirstName: user.FirstName,
+		LastName:  user.LastName,
+		Email:     user.Email,
+		Role:      string(user.Role),
+		IsActive:  user.IsActive,
+		CreatedAt: user.CreatedAt,
+		UpdatedAt: user.UpdatedAt,
+	}
+
+	h.responseWriter.WriteSuccess(w, response, http.StatusOK)
 }
