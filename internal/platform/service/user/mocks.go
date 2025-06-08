@@ -42,6 +42,9 @@ func (m *MockUserRepository) FindByEmail(ctx context.Context, email string) (*us
 
 func (m *MockUserRepository) List(ctx context.Context, page, limit int) ([]*users.User, error) {
 	args := m.Called(ctx, page, limit)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
 	return args.Get(0).([]*users.User), args.Error(1)
 }
 

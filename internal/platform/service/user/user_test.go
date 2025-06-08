@@ -271,6 +271,7 @@ func TestListUsers(t *testing.T) {
 			page:  1,
 			limit: 10,
 			mockSetup: func(repo *MockUserRepository) {
+				repo.On("Count", mock.Anything).Return(0, nil)
 				repo.On("List", mock.Anything, 1, 10).Return(nil, errors.New("database error"))
 			},
 			expectedUsers: nil,
@@ -282,7 +283,6 @@ func TestListUsers(t *testing.T) {
 			page:  1,
 			limit: 10,
 			mockSetup: func(repo *MockUserRepository) {
-				repo.On("List", mock.Anything, 1, 10).Return([]*users.User{}, nil)
 				repo.On("Count", mock.Anything).Return(0, errors.New("database error"))
 			},
 			expectedUsers: nil,
