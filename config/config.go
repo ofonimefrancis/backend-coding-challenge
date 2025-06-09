@@ -13,6 +13,7 @@ type Configuration struct {
 	Server   ServerConfig
 	Database Postgres
 	JWT      JWTConfig
+	Redis    RedisConfig
 	AppName  string `env:"APP_NAME,default=[thermondo-backend]: "`
 }
 
@@ -36,6 +37,13 @@ type Postgres struct {
 type JWTConfig struct {
 	Secret string        `env:"JWT_SECRET,default=secret"`
 	Expiry time.Duration `env:"JWT_EXPIRY,default=1h"`
+}
+
+type RedisConfig struct {
+	Host     string `env:"REDIS_HOST,default=localhost"`
+	Port     string `env:"REDIS_PORT,default=6379"`
+	Password string `env:"REDIS_PASSWORD,default=password"`
+	DB       int    `env:"REDIS_DB,default=0"`
 }
 
 // LoadConfig loads the configuration from the environment variables
