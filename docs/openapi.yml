@@ -1,0 +1,868 @@
+openapi: 3.0.0
+info:
+  description: A Movie Rating System API that allows users to rate movies and view their ratings.
+  title: Movie Rating System API
+  termsOfService: http://swagger.io/terms/
+  contact:
+    name: API Support
+    url: http://www.swagger.io/support
+    email: support@swagger.io
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+  version: '1.0'
+servers:
+  - url: http://localhost:8081/
+    description: Local development server
+paths:
+  /health:
+    get:
+      description: Check if the service is healthy
+      tags:
+        - health
+      summary: Health check
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  timestamp:
+                    type: string
+                    format: date-time
+  /ready:
+    get:
+      description: Check if the service is ready to handle requests
+      tags:
+        - health
+      summary: Readiness check
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  timestamp:
+                    type: string
+                    format: date-time
+  /api/v1/movies:
+    get:
+      description: Get a list of all movies with optional pagination and filtering
+      tags:
+        - movies
+      summary: Get all movies
+      parameters:
+        - name: limit
+          in: query
+          description: 'Number of movies to return (default: 20)'
+          schema:
+            type: integer
+        - name: offset
+          in: query
+          description: 'Offset for pagination (default: 0)'
+          schema:
+            type: integer
+        - name: sort_by
+          in: query
+          description: 'Field to sort by (default: created_at)'
+          schema:
+            type: string
+        - name: order
+          in: query
+          description: 'Sort order (asc or desc, default: desc)'
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MovieResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    post:
+      description: Create a new movie with the provided information
+      tags:
+        - movies
+      summary: Create a new movie
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateMovieRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MovieResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/movies/{id}:
+    get:
+      description: Get detailed information about a specific movie
+      tags:
+        - movies
+      summary: Get a movie by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Movie ID
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MovieResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/movies/search:
+    get:
+      description: Search for movies based on various criteria
+      tags:
+        - movies
+      summary: Search movies
+      parameters:
+        - name: query
+          in: query
+          description: Search query
+          schema:
+            type: string
+        - name: genre
+          in: query
+          description: Movie genre
+          schema:
+            type: string
+        - name: director
+          in: query
+          description: Movie director
+          schema:
+            type: string
+        - name: min_year
+          in: query
+          description: Minimum release year
+          schema:
+            type: integer
+        - name: max_year
+          in: query
+          description: Maximum release year
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          description: 'Number of movies to return (default: 20)'
+          schema:
+            type: integer
+        - name: offset
+          in: query
+          description: 'Offset for pagination (default: 0)'
+          schema:
+            type: integer
+        - name: sort_by
+          in: query
+          description: 'Field to sort by (default: created_at)'
+          schema:
+            type: string
+        - name: order
+          in: query
+          description: 'Sort order (asc or desc, default: desc)'
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SearchMoviesResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/movies/{movieId}/ratings:
+    get:
+      description: Get all ratings for a specific movie
+      tags:
+        - ratings
+      summary: Get movie ratings
+      parameters:
+        - name: movieId
+          in: path
+          required: true
+          description: Movie ID
+          schema:
+            type: string
+        - name: limit
+          in: query
+          description: 'Number of ratings to return (default: 20)'
+          schema:
+            type: integer
+        - name: offset
+          in: query
+          description: 'Offset for pagination (default: 0)'
+          schema:
+            type: integer
+        - name: sort_by
+          in: query
+          description: 'Field to sort by (default: created_at)'
+          schema:
+            type: string
+        - name: order
+          in: query
+          description: 'Sort order (asc or desc, default: desc)'
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ratings:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/RatingResponse'
+                  total:
+                    type: integer
+                  limit:
+                    type: integer
+                  offset:
+                    type: integer
+                  has_more:
+                    type: boolean
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/movies/{movieId}/stats:
+    get:
+      description: Get statistics for a specific movie
+      tags:
+        - movies
+      summary: Get movie stats
+      parameters:
+        - name: movieId
+          in: path
+          required: true
+          description: Movie ID
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  average_rating:
+                    type: number
+                    format: float
+                  total_ratings:
+                    type: integer
+                  rating_distribution:
+                    type: object
+                    additionalProperties:
+                      type: integer
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/ratings/{id}:
+    get:
+      description: Get detailed information about a specific rating
+      tags:
+        - ratings
+      summary: Get a rating by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Rating ID
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RatingResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    put:
+      description: Update an existing rating
+      tags:
+        - ratings
+      summary: Update a rating
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Rating ID
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateRatingRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RatingResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    delete:
+      description: Delete an existing rating
+      tags:
+        - ratings
+      summary: Delete a rating
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Rating ID
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/users:
+    get:
+      description: Get a list of all users with optional pagination and filtering
+      tags:
+        - users
+      summary: List users
+      parameters:
+        - name: limit
+          in: query
+          description: 'Number of users to return (default: 20)'
+          schema:
+            type: integer
+        - name: offset
+          in: query
+          description: 'Offset for pagination (default: 0)'
+          schema:
+            type: integer
+        - name: sort_by
+          in: query
+          description: 'Field to sort by (default: created_at)'
+          schema:
+            type: string
+        - name: order
+          in: query
+          description: 'Sort order (asc or desc, default: desc)'
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  users:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/UserResponse'
+                  total:
+                    type: integer
+                  limit:
+                    type: integer
+                  offset:
+                    type: integer
+                  has_more:
+                    type: boolean
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    post:
+      description: Create a new user with the provided information
+      tags:
+        - users
+      summary: Create a new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateUserRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/users/{id}:
+    get:
+      description: Get detailed information about a specific user
+      tags:
+        - users
+      summary: Get a user by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: User ID
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/users/{userId}/ratings/{movieId}:
+    get:
+      description: Get a specific user's rating for a specific movie
+      tags:
+        - ratings
+      summary: Get user's rating for a movie
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          description: User ID
+          schema:
+            type: string
+        - name: movieId
+          in: path
+          required: true
+          description: Movie ID
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RatingResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/user/{userId}/profile:
+    get:
+      description: Get detailed profile information for a specific user
+      tags:
+        - users
+      summary: Get user profile
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          description: User ID
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  first_name:
+                    type: string
+                  last_name:
+                    type: string
+                  email:
+                    type: string
+                  role:
+                    type: string
+                  is_active:
+                    type: boolean
+                  created_at:
+                    type: string
+                    format: date-time
+                  updated_at:
+                    type: string
+                    format: date-time
+                  total_ratings:
+                    type: integer
+                  average_rating:
+                    type: number
+                    format: float
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+components:
+  schemas:
+    CreateMovieRequest:
+      type: object
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        director:
+          type: string
+        genre:
+          type: string
+        release_year:
+          type: integer
+        duration_mins:
+          type: integer
+        language:
+          type: string
+        country:
+          type: string
+        budget:
+          type: integer
+        revenue:
+          type: integer
+        rating:
+          type: string
+        imdb_id:
+          type: string
+        poster_url:
+          type: string
+    MovieResponse:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+        director:
+          type: string
+        genre:
+          type: string
+        release_year:
+          type: integer
+        duration_mins:
+          type: integer
+        language:
+          type: string
+        country:
+          type: string
+        budget:
+          type: integer
+        revenue:
+          type: integer
+        rating:
+          type: string
+        imdb_id:
+          type: string
+        poster_url:
+          type: string
+        created_at:
+          type: string
+        updated_at:
+          type: string
+    SearchMoviesResponse:
+      type: object
+      properties:
+        movies:
+          type: array
+          items:
+            $ref: '#/components/schemas/MovieResponse'
+        total:
+          type: integer
+        limit:
+          type: integer
+        offset:
+          type: integer
+        has_more:
+          type: boolean
+        query:
+          type: string
+    UpdateRatingRequest:
+      type: object
+      properties:
+        score:
+          type: integer
+        review:
+          type: string
+    RatingResponse:
+      type: object
+      properties:
+        id:
+          type: string
+        user_id:
+          type: string
+        movie_id:
+          type: string
+        score:
+          type: integer
+        review:
+          type: string
+        created_at:
+          type: string
+        updated_at:
+          type: string
+    SuccessResponse:
+      type: object
+      properties:
+        message:
+          type: string
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+    CreateUserRequest:
+      type: object
+      properties:
+        email:
+          type: string
+        password:
+          type: string
+        first_name:
+          type: string
+        last_name:
+          type: string
+        role:
+          type: string
+        is_active:
+          type: boolean
+          description: optional
+    UserResponse:
+      type: object
+      properties:
+        id:
+          type: string
+        email:
+          type: string
+        first_name:
+          type: string
+        last_name:
+          type: string
+        role:
+          type: string
+        is_active:
+          type: boolean
+        created_at:
+          type: string
+        updated_at:
+          type: string
+  securitySchemes:
+    BasicAuth:
+      type: http
+      scheme: basic
