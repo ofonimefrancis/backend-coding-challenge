@@ -28,7 +28,7 @@ performance. 💪**
 ## ✨ Bonus Points
 
 - [ ] Implement authentication and authorization mechanisms for users.
-- [ ] Provide documentation for your API endpoints using tools like Swagger.
+- [x] Provide documentation for your API endpoints using tools like Swagger.
 - [x] Implement logging to record errors and debug information.
 - [x] Implement caching mechanisms to improve the rating system's performance.
 - [ ] Implement CI/CD quality gates.
@@ -79,7 +79,7 @@ performance. 💪**
    This will start:
    - PostgreSQL database on port 5432
    - Redis cache on port 6379
-   - The application on ports 8080 (main API) and 8081 (metrics)
+   - The application on ports 8080 (main API)
 
 4. To stop the application:
    ```bash
