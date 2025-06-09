@@ -62,6 +62,69 @@ performance. 💪**
 - Remember to approach the challenge as you would a real-world project, focusing
   on scalability, performance, and reliability.
 
+## 🚀 Running the Application
+
+### Using Docker (Recommended)
+
+1. Make sure you have Docker and Docker Compose installed on your system
+2. Clone the repository:
+   ```bash
+   git clone <repository-url>
+   cd <repository-name>
+   ```
+3. Build and start the containers:
+   ```bash
+   docker-compose up --build
+   ```
+   This will start:
+   - PostgreSQL database on port 5432
+   - Redis cache on port 6379
+   - The application on ports 8080 (main API) and 8081 (metrics)
+
+4. To stop the application:
+   ```bash
+   docker-compose down
+   ```
+
+### Running Locally
+
+1. Prerequisites:
+   - Go 1.21 or later
+   - PostgreSQL 15
+   - Redis 7
+
+2. Set up the database:
+   ```bash
+   # Create the database
+   createdb test_db
+   
+   # Run migrations (if using golang-migrate)
+   migrate -path ./internal/platform/repository/migrations -database "postgresql://postgres:postgres@localhost:5432/test_db?sslmode=disable" up
+   ```
+
+3. Set up environment variables:
+   ```bash
+   export POSTGRESQL_DSN="host=localhost dbname=test_db user=postgres password=postgres sslmode=disable"
+   export REDIS_DSN="localhost:6379"
+   export POSTGRES_HEALTH_CHECK="true"
+   export REDIS_HEALTH_CHECK="true"
+   ```
+
+4. Run the application:
+   ```bash
+   go run cmd/api/main.go
+   ```
+
+The application will be available at:
+- Main API: http://localhost:8080
+- Metrics: http://localhost:8081
+
+### Health Checks
+
+The application includes health check endpoints:
+- API Health: http://localhost:8080/health
+- Metrics: http://localhost:8081/metrics
+
 ## 🤔 What if I don't finish?
 
 Part of the exercise is to see what you prioritize first when you have a limited
