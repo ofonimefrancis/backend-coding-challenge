@@ -19,7 +19,7 @@ RUN apk add --no-cache ca-certificates tzdata
 WORKDIR /app
 
 COPY --from=builder /app/movie-service .
-COPY --from=builder /app/migrations ./migrations
+COPY --from=builder /app/internal/platform/repository/migrations ./migrations
 COPY --from=builder /app/dbconfig.yml .
 
 EXPOSE 8080
