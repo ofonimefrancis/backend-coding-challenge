@@ -117,13 +117,12 @@ performance. 💪**
 
 The application will be available at:
 - Main API: http://localhost:8080
-- Metrics: http://localhost:8081
 
 ### Health Checks
 
 The application includes health check endpoints:
 - API Health: http://localhost:8080/health
-- Metrics: http://localhost:8081/metrics
+- Readiness: http://localhost:8081/ready
 
 ## 🤔 What if I don't finish?
 
