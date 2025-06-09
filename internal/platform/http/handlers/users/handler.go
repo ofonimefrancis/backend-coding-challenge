@@ -10,12 +10,13 @@ import (
 )
 
 type Handler struct {
-	logger         *slog.Logger
 	userService    userService.UserService
+	logger         *slog.Logger
 	responseWriter *response.Writer
+	jwtSecret      string
 }
 
-func NewHandler(userService userService.UserService, logger *slog.Logger) *Handler {
+func NewHandler(userService userService.UserService, logger *slog.Logger, jwtSecret string) *Handler {
 	if logger == nil {
 		logger = slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
 			Level: slog.LevelInfo,
@@ -23,20 +24,18 @@ func NewHandler(userService userService.UserService, logger *slog.Logger) *Handl
 	}
 
 	return &Handler{
-		logger:         logger,
 		userService:    userService,
+		logger:         logger,
 		responseWriter: response.NewWriter(logger),
+		jwtSecret:      jwtSecret,
 	}
 }
 
 func (h *Handler) RegisterRoutes(router chi.Router) {
 	router.Route("/users", func(r chi.Router) {
-		r.Get("/", h.ListUsers)
 		r.Post("/", h.CreateUser)
-
-		//Resource routes (operate on single user by ID)
-		r.Route("/{id}", func(r chi.Router) {
-			r.Get("/", h.GetUser)
-		})
+		r.Post("/login", h.Login)
+		r.Get("/", h.ListUsers)
+		r.Get("/{id}", h.GetUser)
 	})
 }

@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"fmt"
+	"sort"
 	"testing"
 	"time"
 
@@ -176,6 +177,9 @@ func TestMovieRepository_GetAll(t *testing.T) {
 
 	movies, err := repo.GetAll(context.Background(), movies.WithLimit(10), movies.WithOffset(0))
 	require.NoError(t, err)
+	// Sort both slices by ID for comparison
+	sort.Slice(movies, func(i, j int) bool { return movies[i].ID < movies[j].ID })
+	sort.Slice(expectedMovies, func(i, j int) bool { return expectedMovies[i].ID < expectedMovies[j].ID })
 	// Compare only the relevant fields, ignoring timestamps
 	for i, movie := range movies {
 		assert.Equal(t, expectedMovies[i].ID, movie.ID)

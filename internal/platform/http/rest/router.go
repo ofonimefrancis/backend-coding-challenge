@@ -11,6 +11,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
+	httpSwagger "github.com/swaggo/http-swagger"
 )
 
 // HealthStatusProvider defines the interface for health status
@@ -122,6 +123,18 @@ func (r *Router) setupRoutes() {
 	// Health endpoints
 	r.mux.Get("/health", r.handleHealth)
 	r.mux.Get("/ready", r.handleReadiness)
+
+	r.mux.Handle("/swagger/*", http.StripPrefix("/swagger/", http.FileServer(http.Dir("./docs/swagger-ui"))))
+
+	// Serve the OpenAPI YAML
+	r.mux.Get("/swagger/openapi.yml", func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, "./docs/openapi.yml")
+	})
+
+	// Swagger UI
+	r.mux.Get("/swagger/*", httpSwagger.Handler(
+		httpSwagger.URL("/swagger/doc.json"),
+	))
 
 	// API versioning
 	r.mux.Route("/api/v1", func(v1 chi.Router) {

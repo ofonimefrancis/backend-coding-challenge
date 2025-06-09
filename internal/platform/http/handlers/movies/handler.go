@@ -45,7 +45,18 @@ func (h *Handler) RegisterRoutes(router chi.Router) {
 	router.Route("/movies", func(r chi.Router) {
 		r.Post("/", h.CreateMovie)
 		r.Get("/", h.GetAllMovies)
-		r.Get("/search", h.SearchMovies)
+
+		// Weird Chi router bug, so removing this and replacing
+		// with the routes below
+		// r.Get("/search", h.SearchMovies)
+
+		// r.Route("/{id}", func(r chi.Router) {
+		// 	r.Get("/", h.GetMovie)
+		// })
+	})
+
+	router.Route("/search/movies", func(r chi.Router) {
+		r.Get("/", h.SearchMovies)
 
 		r.Route("/{id}", func(r chi.Router) {
 			r.Get("/", h.GetMovie)

@@ -1,0 +1,64 @@
+meta {
+  name: Movies API
+  type: http
+  seq: 1
+}
+
+vars {
+  base_url: http://localhost:8080
+}
+
+# Create a new movie
+post: Create Movie {
+  url: {{base_url}}/movies
+  body: json {
+    "title": "The Shawshank Redemption",
+    "description": "Two imprisoned men bond over a number of years, finding solace and eventual redemption through acts of common decency.",
+    "release_year": 1994,
+    "genre": "Drama",
+    "director": "Frank Darabont",
+    "duration_mins": 142,
+    "rating": "R",
+    "language": "English",
+    "country": "USA",
+    "budget": 25000000,
+    "revenue": 28341469,
+    "imdb_id": "tt0111161",
+    "poster_url": "https://example.com/poster.jpg"
+  }
+}
+
+# Get all movies with pagination and sorting
+get: Get All Movies {
+  url: {{base_url}}/movies
+  query: {
+    limit: 20
+    offset: 0
+    sort_by: created_at
+    order: desc
+  }
+}
+
+# Search movies with filters
+get: Search Movies {
+  url: {{base_url}}/search/movies
+  query: {
+    q: "redemption"
+    genre: "Drama"
+    director: "Frank"
+    min_year: 1990
+    max_year: 2000
+    limit: 20
+    offset: 0
+    sort_by: release_year
+    order: desc
+  }
+}
+
+# Get movie by ID
+get: Get Movie by ID {
+  url: {{base_url}}/search/movies/{{movie_id}}
+  vars: {
+    movie_id: "123e4567-e89b-12d3-a456-426614174000"
+  }
+} 

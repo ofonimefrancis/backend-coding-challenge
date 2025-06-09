@@ -3,6 +3,7 @@ package user
 import (
 	"context"
 	"thermondo/internal/domain/users"
+	"thermondo/internal/pkg/password"
 )
 
 type UserFilters struct {
@@ -35,11 +36,17 @@ func (s *userService) CreateUser(ctx context.Context, user users.CreateUserReque
 		return nil, users.ErrUserAlreadyExists
 	}
 
+	// Hash the password before creating the user
+	hashedPassword, err := password.HashPassword(user.Password)
+	if err != nil {
+		return nil, err
+	}
+
 	u, err := users.NewUser(
 		user.FirstName,
 		user.LastName,
 		user.Email,
-		user.Password,
+		hashedPassword, // Use hashed password instead of plain text
 		s.idGenerator,
 		s.timeProvider,
 		users.WithRole(users.Role(user.Role)),

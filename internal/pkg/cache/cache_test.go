@@ -43,7 +43,6 @@ func TestNoOpCache_Behavior(t *testing.T) {
 	err = c.Close()
 	assert.NoError(t, err)
 
-	// MGet should return nil
 	err = c.MGet(ctx, []string{"key1", "key2"}, &dest)
 	assert.NoError(t, err)
 

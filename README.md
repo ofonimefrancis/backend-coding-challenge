@@ -102,7 +102,7 @@ performance. 💪**
    migrate -path ./internal/platform/repository/migrations -database "postgresql://postgres:postgres@localhost:5432/test_db?sslmode=disable" up
    ```
 
-3. Set up environment variables:
+3. Set up environment variables or use a .env file:
    ```bash
    export POSTGRESQL_DSN="host=localhost dbname=test_db user=postgres password=postgres sslmode=disable"
    export REDIS_DSN="localhost:6379"
@@ -118,11 +118,14 @@ performance. 💪**
 The application will be available at:
 - Main API: http://localhost:8080
 
+### Documentation 
+The openapi specification is available in the docs folder. Naturally, this file would be served statically, so that it can be viewed over the browser but I didn't have enough time to get around to it. 😔 
+
 ### Health Checks
 
 The application includes health check endpoints:
 - API Health: http://localhost:8080/health
-- Readiness: http://localhost:8081/ready
+- Readiness: http://localhost:8080/ready
 
 ## 🤔 What if I don't finish?
 

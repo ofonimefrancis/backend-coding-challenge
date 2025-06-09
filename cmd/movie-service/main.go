@@ -42,7 +42,7 @@ func main() {
 	if appEnv == "production" {
 		redisConfig := cache.RedisConfig{
 			Host:     cfg.Redis.Host,
-			Port:     6379, // Default Redis port
+			Port:     cfg.Redis.Port, // Default Redis port
 			Password: cfg.Redis.Password,
 			DB:       cfg.Redis.DB,
 		}
@@ -71,7 +71,7 @@ func main() {
 	ratingService := ratingService.NewRatingService(ratingRepo, idGenerator, timeProvider, logger)
 
 	// Handlers
-	userHandler := userHandlers.NewHandler(userService, logger)
+	userHandler := userHandlers.NewHandler(userService, logger, cfg.JWT.Secret)
 	movieHandler := movieHandlers.NewHandler(movieService, logger)
 	ratingHandler := ratingHandlers.NewHandler(ratingService, logger)
 	userProfileHandler := userHandlers.NewProfileHandler(userService, logger)

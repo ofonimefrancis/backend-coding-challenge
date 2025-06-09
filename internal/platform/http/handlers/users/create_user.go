@@ -32,12 +32,27 @@ func (h *Handler) CreateUser(w http.ResponseWriter, r *http.Request) {
 	var req domainUser.CreateUserRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.logger.Error("[create_user_handler] Invalid JSON", "error", err)
-		h.responseWriter.WriteError(w, "Invalid JSON", http.StatusBadRequest)
+		h.responseWriter.WriteError(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
 
 	savedUser, err := h.userService.CreateUser(r.Context(), req)
 	if err != nil {
+		// Validation errors
+		switch err.Error() {
+		case "invalid input":
+			h.responseWriter.WriteError(w, "Invalid request body", http.StatusBadRequest)
+			return
+		case "Missing required fields":
+			h.responseWriter.WriteError(w, "Missing required fields", http.StatusBadRequest)
+			return
+		case "Invalid email format":
+			h.responseWriter.WriteError(w, "Invalid email format", http.StatusBadRequest)
+			return
+		case "Invalid role":
+			h.responseWriter.WriteError(w, "Invalid role", http.StatusBadRequest)
+			return
+		}
 		h.logger.Error("[create_user_handler] Failed to create user", "error", err)
 		h.handleCreateUserServiceError(w, err)
 		return

@@ -40,6 +40,7 @@ services:
       REDIS_DSN: "redis:6379"
       POSTGRES_HEALTH_CHECK: "true"
       REDIS_HEALTH_CHECK: "true"
+      SERVER_HOST: "0.0.0.0"
     depends_on:
       postgres:
         condition: service_healthy

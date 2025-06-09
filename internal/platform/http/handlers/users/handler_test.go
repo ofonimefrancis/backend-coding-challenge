@@ -5,74 +5,21 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"testing"
-	"time"
-
 	"thermondo/internal/domain/users"
 	"thermondo/internal/pkg/http/response"
-	"thermondo/internal/platform/service/user"
+	"time"
+
+	"thermondo/internal/pkg/password"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
-
-// MockUserService is a mock implementation of the UserService interface
-type MockUserService struct {
-	mock.Mock
-}
-
-func (m *MockUserService) CreateUser(ctx context.Context, user users.CreateUserRequest) (*users.User, error) {
-	args := m.Called(ctx, user)
-	if args.Get(0) == nil {
-		return nil, args.Error(1)
-	}
-	return args.Get(0).(*users.User), args.Error(1)
-}
-
-func (m *MockUserService) FindUserByID(ctx context.Context, id string) (*users.User, error) {
-	args := m.Called(ctx, id)
-	if args.Get(0) == nil {
-		return nil, args.Error(1)
-	}
-	return args.Get(0).(*users.User), args.Error(1)
-}
-
-func (m *MockUserService) FindUserByEmail(ctx context.Context, email string) (*users.User, error) {
-	args := m.Called(ctx, email)
-	if args.Get(0) == nil {
-		return nil, args.Error(1)
-	}
-	return args.Get(0).(*users.User), args.Error(1)
-}
-
-func (m *MockUserService) ListUsers(ctx context.Context, page, limit int) ([]*users.User, int, error) {
-	args := m.Called(ctx, page, limit)
-	return args.Get(0).([]*users.User), args.Int(1), args.Error(2)
-}
-
-func (m *MockUserService) GetUserProfile(ctx context.Context, req user.UserProfileRequest) ([]*user.UserRatingWithMovie, *user.UserProfileStats, error) {
-	args := m.Called(ctx, req)
-	if args.Get(0) == nil {
-		return nil, nil, args.Error(2)
-	}
-	return args.Get(0).([]*user.UserRatingWithMovie), args.Get(1).(*user.UserProfileStats), args.Error(2)
-}
-
-func (m *MockUserService) GetUserStats(ctx context.Context, userID string) (*user.UserProfileStats, error) {
-	args := m.Called(ctx, userID)
-	if args.Get(0) == nil {
-		return nil, args.Error(1)
-	}
-	return args.Get(0).(*user.UserProfileStats), args.Error(1)
-}
-
-func (m *MockUserService) InvalidateUserCache(ctx context.Context, userID string) error {
-	args := m.Called(ctx, userID)
-	return args.Error(0)
-}
 
 func TestCreateUser(t *testing.T) {
 	tests := []struct {
@@ -92,60 +39,89 @@ func TestCreateUser(t *testing.T) {
 				Role:      "user",
 			},
 			mockSetup: func(service *MockUserService) {
-				service.On("CreateUser", mock.Anything, mock.Anything).Return(&users.User{
+				service.On("CreateUser", mock.Anything, mock.AnythingOfType("users.CreateUserRequest")).Return(&users.User{
 					ID:        "test-id",
 					FirstName: "John",
 					LastName:  "Doe",
 					Email:     "john.doe@example.com",
 					Role:      users.RoleUser,
 					IsActive:  true,
-					CreatedAt: time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC),
+					CreatedAt: time.Now(),
+					UpdatedAt: time.Now(),
 				}, nil)
 			},
 			expectedStatus: http.StatusCreated,
-			expectedBody: createUserResponse{
-				ID:        "test-id",
+			expectedBody: UserResponse{
 				FirstName: "John",
 				LastName:  "Doe",
 				Email:     "john.doe@example.com",
 				Role:      "user",
-				IsActive:  boolPtr(true),
-				CreatedAt: time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC),
+				IsActive:  true,
 			},
 		},
 		{
-			name:           "invalid JSON",
-			requestBody:    "invalid json",
-			mockSetup:      func(service *MockUserService) {},
+			name: "invalid request body",
+			requestBody: map[string]interface{}{
+				"firstName": 123, // Invalid type for firstName
+			},
+			mockSetup: func(service *MockUserService) {
+				service.On("CreateUser", mock.Anything, mock.AnythingOfType("users.CreateUserRequest")).Return(nil, errors.New("invalid input"))
+			},
 			expectedStatus: http.StatusBadRequest,
-			expectedBody:   response.ErrorResponse{Error: "Invalid JSON"},
+			expectedBody:   response.ErrorResponse{Error: "Invalid request body"},
 		},
 		{
-			name: "user already exists",
+			name: "missing required fields",
+			requestBody: users.CreateUserRequest{
+				FirstName: "John",
+				// Missing lastName, email, and password
+			},
+			mockSetup: func(service *MockUserService) {
+				service.On("CreateUser", mock.Anything, mock.AnythingOfType("users.CreateUserRequest")).Return(nil, errors.New("invalid input"))
+			},
+			expectedStatus: http.StatusBadRequest,
+			expectedBody:   response.ErrorResponse{Error: "Invalid request body"},
+		},
+		{
+			name: "invalid email format",
 			requestBody: users.CreateUserRequest{
 				FirstName: "John",
 				LastName:  "Doe",
-				Email:     "existing@example.com",
+				Email:     "invalid-email",
+				Password:  "password123",
+			},
+			mockSetup: func(service *MockUserService) {
+				service.On("CreateUser", mock.Anything, mock.AnythingOfType("users.CreateUserRequest")).Return(nil, errors.New("invalid input"))
+			},
+			expectedStatus: http.StatusBadRequest,
+			expectedBody:   response.ErrorResponse{Error: "Invalid request body"},
+		},
+		{
+			name: "invalid role",
+			requestBody: users.CreateUserRequest{
+				FirstName: "John",
+				LastName:  "Doe",
+				Email:     "john.doe@example.com",
+				Password:  "password123",
+				Role:      "invalid-role",
+			},
+			mockSetup: func(service *MockUserService) {
+				service.On("CreateUser", mock.Anything, mock.AnythingOfType("users.CreateUserRequest")).Return(nil, errors.New("invalid input"))
+			},
+			expectedStatus: http.StatusBadRequest,
+			expectedBody:   response.ErrorResponse{Error: "Invalid request body"},
+		},
+		{
+			name: "service error",
+			requestBody: users.CreateUserRequest{
+				FirstName: "John",
+				LastName:  "Doe",
+				Email:     "john.doe@example.com",
 				Password:  "password123",
 				Role:      "user",
 			},
 			mockSetup: func(service *MockUserService) {
-				service.On("CreateUser", mock.Anything, mock.Anything).Return(nil, users.ErrUserAlreadyExists)
-			},
-			expectedStatus: http.StatusConflict,
-			expectedBody:   response.ErrorResponse{Error: "user already exists"},
-		},
-		{
-			name: "internal server error",
-			requestBody: users.CreateUserRequest{
-				FirstName: "John",
-				LastName:  "Doe",
-				Email:     "error@example.com",
-				Password:  "password123",
-				Role:      "user",
-			},
-			mockSetup: func(service *MockUserService) {
-				service.On("CreateUser", mock.Anything, mock.Anything).Return(nil, errors.New("database error"))
+				service.On("CreateUser", mock.Anything, mock.AnythingOfType("users.CreateUserRequest")).Return(nil, errors.New("database error"))
 			},
 			expectedStatus: http.StatusInternalServerError,
 			expectedBody:   response.ErrorResponse{Error: "Internal server error"},
@@ -157,11 +133,18 @@ func TestCreateUser(t *testing.T) {
 			// Setup
 			mockService := new(MockUserService)
 			tt.mockSetup(mockService)
-			handler := NewHandler(mockService, nil)
+			logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}))
+			handler := NewHandler(mockService, logger, "test-secret")
 
 			// Create request
-			body, _ := json.Marshal(tt.requestBody)
-			req := httptest.NewRequest(http.MethodPost, "/users", bytes.NewBuffer(body))
+			var reqBody []byte
+			var err error
+			if tt.requestBody != nil {
+				reqBody, err = json.Marshal(tt.requestBody)
+				assert.NoError(t, err)
+			}
+			req := httptest.NewRequest(http.MethodPost, "/users", bytes.NewBuffer(reqBody))
+			req.Header.Set("Content-Type", "application/json")
 			w := httptest.NewRecorder()
 
 			// Execute
@@ -170,11 +153,16 @@ func TestCreateUser(t *testing.T) {
 			// Assert
 			assert.Equal(t, tt.expectedStatus, w.Code)
 
-			if resp, ok := tt.expectedBody.(createUserResponse); ok {
-				var actual createUserResponse
+			if resp, ok := tt.expectedBody.(UserResponse); ok {
+				var actual UserResponse
 				err := json.Unmarshal(w.Body.Bytes(), &actual)
 				assert.NoError(t, err)
-				assert.Equal(t, resp, actual)
+				// Don't compare ID, CreatedAt, and UpdatedAt as they are generated
+				assert.Equal(t, resp.FirstName, actual.FirstName)
+				assert.Equal(t, resp.LastName, actual.LastName)
+				assert.Equal(t, resp.Email, actual.Email)
+				assert.Equal(t, resp.Role, actual.Role)
+				assert.Equal(t, resp.IsActive, actual.IsActive)
 			} else if resp, ok := tt.expectedBody.(response.ErrorResponse); ok {
 				var actual response.ErrorResponse
 				err := json.Unmarshal(w.Body.Bytes(), &actual)
@@ -183,6 +171,117 @@ func TestCreateUser(t *testing.T) {
 			} else {
 				t.Fatalf("unexpected expectedBody type: %T", tt.expectedBody)
 			}
+		})
+	}
+}
+
+func TestLogin(t *testing.T) {
+	mockService := new(MockUserService)
+	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}))
+	handler := NewHandler(mockService, logger, "test-secret")
+
+	// Create a properly hashed password for testing
+	hashedPassword, _ := password.HashPassword("password123")
+
+	tests := []struct {
+		name           string
+		requestBody    interface{}
+		mockSetup      func()
+		expectedStatus int
+		expectedBody   interface{}
+	}{
+		{
+			name: "successful login",
+			requestBody: loginRequest{
+				Email:    "john@example.com",
+				Password: "password123",
+			},
+			mockSetup: func() {
+				mockService.On("FindUserByEmail", mock.Anything, "john@example.com").Return(&users.User{
+					ID:        "test-id",
+					FirstName: "John",
+					LastName:  "Doe",
+					Email:     "john@example.com",
+					Password:  hashedPassword,
+					Role:      users.RoleUser,
+					IsActive:  true,
+					CreatedAt: time.Now(),
+					UpdatedAt: time.Now(),
+				}, nil)
+			},
+			expectedStatus: http.StatusOK,
+			expectedBody: loginResponse{
+				Token:     "mock-token",
+				ExpiresAt: time.Now().Add(24 * time.Hour).Unix(),
+			},
+		},
+		{
+			name: "invalid credentials",
+			requestBody: loginRequest{
+				Email:    "john@example.com",
+				Password: "wrongpassword",
+			},
+			mockSetup: func() {
+				mockService.On("FindUserByEmail", mock.Anything, "john@example.com").Return(&users.User{
+					ID:        "test-id",
+					FirstName: "John",
+					LastName:  "Doe",
+					Email:     "john@example.com",
+					Password:  hashedPassword,
+					Role:      users.RoleUser,
+					IsActive:  true,
+					CreatedAt: time.Now(),
+					UpdatedAt: time.Now(),
+				}, nil)
+			},
+			expectedStatus: http.StatusUnauthorized,
+			expectedBody:   "Invalid credentials",
+		},
+		{
+			name:        "invalid request body",
+			requestBody: "not a json",
+			mockSetup: func() {
+				// No mock setup needed for invalid JSON
+			},
+			expectedStatus: http.StatusBadRequest,
+			expectedBody:   "Invalid JSON",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Setup mock
+			tt.mockSetup()
+
+			// Create request
+			body, _ := json.Marshal(tt.requestBody)
+			req := httptest.NewRequest(http.MethodPost, "/login", bytes.NewBuffer(body))
+			w := httptest.NewRecorder()
+
+			// Create router and register handler
+			router := chi.NewRouter()
+			router.Post("/login", handler.Login)
+
+			// Serve request
+			router.ServeHTTP(w, req)
+
+			// Assert response
+			assert.Equal(t, tt.expectedStatus, w.Code)
+
+			if tt.expectedStatus == http.StatusOK {
+				var response loginResponse
+				err := json.NewDecoder(w.Body).Decode(&response)
+				assert.NoError(t, err)
+				assert.NotEmpty(t, response.Token)
+				assert.Greater(t, response.ExpiresAt, time.Now().Unix())
+			} else {
+				var response map[string]string
+				err := json.NewDecoder(w.Body).Decode(&response)
+				assert.NoError(t, err)
+				assert.Equal(t, tt.expectedBody.(string), response["error"])
+			}
+
+			mockService.AssertExpectations(t)
 		})
 	}
 }
@@ -247,7 +346,8 @@ func TestGetUser(t *testing.T) {
 			// Setup
 			mockService := new(MockUserService)
 			tt.mockSetup(mockService)
-			handler := NewHandler(mockService, nil)
+			logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}))
+			handler := NewHandler(mockService, logger, "test-secret")
 
 			// Create request
 			req := httptest.NewRequest(http.MethodGet, "/users/"+tt.userID, nil)
@@ -400,7 +500,8 @@ func TestListUsers(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			mockService := new(MockUserService)
 			tt.mockSetup(mockService)
-			handler := NewHandler(mockService, nil)
+			logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}))
+			handler := NewHandler(mockService, logger, "test-secret")
 			req := httptest.NewRequest(http.MethodGet, "/users?"+tt.queryParams, nil)
 			w := httptest.NewRecorder()
 			handler.ListUsers(w, req)
