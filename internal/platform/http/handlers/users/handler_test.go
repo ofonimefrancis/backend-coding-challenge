@@ -12,6 +12,7 @@ import (
 
 	"thermondo/internal/domain/users"
 	"thermondo/internal/pkg/http/response"
+	"thermondo/internal/platform/service/user"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/assert"
@@ -50,6 +51,27 @@ func (m *MockUserService) FindUserByEmail(ctx context.Context, email string) (*u
 func (m *MockUserService) ListUsers(ctx context.Context, page, limit int) ([]*users.User, int, error) {
 	args := m.Called(ctx, page, limit)
 	return args.Get(0).([]*users.User), args.Int(1), args.Error(2)
+}
+
+func (m *MockUserService) GetUserProfile(ctx context.Context, req user.UserProfileRequest) ([]*user.UserRatingWithMovie, *user.UserProfileStats, error) {
+	args := m.Called(ctx, req)
+	if args.Get(0) == nil {
+		return nil, nil, args.Error(2)
+	}
+	return args.Get(0).([]*user.UserRatingWithMovie), args.Get(1).(*user.UserProfileStats), args.Error(2)
+}
+
+func (m *MockUserService) GetUserStats(ctx context.Context, userID string) (*user.UserProfileStats, error) {
+	args := m.Called(ctx, userID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*user.UserProfileStats), args.Error(1)
+}
+
+func (m *MockUserService) InvalidateUserCache(ctx context.Context, userID string) error {
+	args := m.Called(ctx, userID)
+	return args.Error(0)
 }
 
 func TestCreateUser(t *testing.T) {
@@ -196,8 +218,8 @@ func TestGetUser(t *testing.T) {
 				Email:     "john.doe@example.com",
 				Role:      "user",
 				IsActive:  true,
-				CreatedAt: time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC),
-				UpdatedAt: time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC),
+				CreatedAt: time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC).Format(time.RFC3339),
+				UpdatedAt: time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC).Format(time.RFC3339),
 			},
 		},
 		{
@@ -305,8 +327,8 @@ func TestListUsers(t *testing.T) {
 						Email:     "john.doe@example.com",
 						Role:      "user",
 						IsActive:  true,
-						CreatedAt: time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC),
-						UpdatedAt: time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC),
+						CreatedAt: time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC).Format(time.RFC3339),
+						UpdatedAt: time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC).Format(time.RFC3339),
 					},
 					{
 						ID:        "test-id-2",
@@ -315,8 +337,8 @@ func TestListUsers(t *testing.T) {
 						Email:     "jane.smith@example.com",
 						Role:      "admin",
 						IsActive:  true,
-						CreatedAt: time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC),
-						UpdatedAt: time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC),
+						CreatedAt: time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC).Format(time.RFC3339),
+						UpdatedAt: time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC).Format(time.RFC3339),
 					},
 				},
 				Pagination: &Pagination{
@@ -350,8 +372,8 @@ func TestListUsers(t *testing.T) {
 				Email:     "john.doe@example.com",
 				Role:      "user",
 				IsActive:  true,
-				CreatedAt: time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC),
-				UpdatedAt: time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC),
+				CreatedAt: time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC).Format(time.RFC3339),
+				UpdatedAt: time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC).Format(time.RFC3339),
 			},
 		},
 		{

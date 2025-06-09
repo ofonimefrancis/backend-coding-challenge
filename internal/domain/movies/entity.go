@@ -71,7 +71,7 @@ func NewMovie(
 	options ...MovieOption,
 ) (*Movie, error) {
 	movie := &Movie{
-		ID:           MovieID(idGenerator.Generate()),
+		ID:           MovieID(strings.TrimSpace(idGenerator.Generate())),
 		Title:        strings.TrimSpace(title),
 		Description:  strings.TrimSpace(description),
 		ReleaseYear:  releaseYear,

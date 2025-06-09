@@ -44,8 +44,9 @@ func (m *movieRepository) GetByID(ctx context.Context, id movies.MovieID) (*movi
 		FROM movies WHERE id = $1`
 
 	movie := &movies.Movie{}
+	var movieID string
 	err := m.db.QueryRowContext(ctx, query, id).Scan(
-		&movie.ID, &movie.Title, &movie.Description, &movie.ReleaseYear,
+		&movieID, &movie.Title, &movie.Description, &movie.ReleaseYear,
 		&movie.Genre, &movie.Director, &movie.DurationMins, &movie.Rating,
 		&movie.Language, &movie.Country, &movie.Budget, &movie.Revenue,
 		&movie.IMDbID, &movie.PosterURL, &movie.CreatedAt, &movie.UpdatedAt,
@@ -58,6 +59,7 @@ func (m *movieRepository) GetByID(ctx context.Context, id movies.MovieID) (*movi
 		return nil, fmt.Errorf("failed to get movie: %w", err)
 	}
 
+	movie.ID = movies.MovieID(strings.TrimSpace(movieID))
 	return movie, nil
 }
 
@@ -72,13 +74,14 @@ func (m *movieRepository) Save(ctx context.Context, movie *movies.Movie) (*movie
 		) RETURNING id, created_at, updated_at`
 
 	var savedMovie movies.Movie = *movie
+	var savedID string
 	err := m.db.QueryRowContext(
 		ctx, query,
 		movie.ID, movie.Title, movie.Description, movie.ReleaseYear,
 		movie.Genre, movie.Director, movie.DurationMins, movie.Rating,
 		movie.Language, movie.Country, movie.Budget, movie.Revenue,
 		movie.IMDbID, movie.PosterURL, movie.CreatedAt, movie.UpdatedAt,
-	).Scan(&savedMovie.ID, &savedMovie.CreatedAt, &savedMovie.UpdatedAt)
+	).Scan(&savedID, &savedMovie.CreatedAt, &savedMovie.UpdatedAt)
 
 	if err != nil {
 		// Check if the error is a unique constraint violation
@@ -88,6 +91,7 @@ func (m *movieRepository) Save(ctx context.Context, movie *movies.Movie) (*movie
 		return nil, fmt.Errorf("failed to save movie: %w", err)
 	}
 
+	savedMovie.ID = movies.MovieID(strings.TrimSpace(savedID))
 	return &savedMovie, nil
 }
 
@@ -121,12 +125,11 @@ func (m *movieRepository) GetByGenre(ctx context.Context, genre string, options 
 			   duration_mins, rating, language, country, budget, revenue,
 			   imdb_id, poster_url, created_at, updated_at
 		FROM movies 
-		WHERE genre ILIKE $1
+		WHERE LOWER(genre) = LOWER($1)
 		ORDER BY %s %s
 		LIMIT $2 OFFSET $3`, m.getSortColumn(opts.SortBy), strings.ToUpper(opts.Order))
 
-	searchPattern := "%" + strings.ToLower(genre) + "%"
-	return m.queryMovies(ctx, query, searchPattern, opts.Limit, opts.Offset)
+	return m.queryMovies(ctx, query, genre, opts.Limit, opts.Offset)
 }
 
 func (m *movieRepository) GetByDirector(ctx context.Context, director string, options ...movies.SearchOption) ([]*movies.Movie, error) {
@@ -140,12 +143,11 @@ func (m *movieRepository) GetByDirector(ctx context.Context, director string, op
 			   duration_mins, rating, language, country, budget, revenue,
 			   imdb_id, poster_url, created_at, updated_at
 		FROM movies 
-		WHERE director ILIKE $1
+		WHERE LOWER(director) = LOWER($1)
 		ORDER BY %s %s
 		LIMIT $2 OFFSET $3`, m.getSortColumn(opts.SortBy), strings.ToUpper(opts.Order))
 
-	searchPattern := "%" + strings.ToLower(director) + "%"
-	return m.queryMovies(ctx, query, searchPattern, opts.Limit, opts.Offset)
+	return m.queryMovies(ctx, query, director, opts.Limit, opts.Offset)
 }
 
 func (m *movieRepository) GetByYearRange(ctx context.Context, startYear, endYear int, options ...movies.SearchOption) ([]*movies.Movie, error) {
@@ -200,8 +202,9 @@ func (m *movieRepository) ScanMovies(rows *sql.Rows) ([]*movies.Movie, error) {
 	var moviesList []*movies.Movie
 	for rows.Next() {
 		movie := &movies.Movie{}
+		var id string
 		err := rows.Scan(
-			&movie.ID, &movie.Title, &movie.Description, &movie.ReleaseYear,
+			&id, &movie.Title, &movie.Description, &movie.ReleaseYear,
 			&movie.Genre, &movie.Director, &movie.DurationMins, &movie.Rating,
 			&movie.Language, &movie.Country, &movie.Budget, &movie.Revenue,
 			&movie.IMDbID, &movie.PosterURL, &movie.CreatedAt, &movie.UpdatedAt,
@@ -209,6 +212,7 @@ func (m *movieRepository) ScanMovies(rows *sql.Rows) ([]*movies.Movie, error) {
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan movie: %w", err)
 		}
+		movie.ID = movies.MovieID(strings.TrimSpace(id))
 		moviesList = append(moviesList, movie)
 	}
 
@@ -218,6 +222,7 @@ func (m *movieRepository) ScanMovies(rows *sql.Rows) ([]*movies.Movie, error) {
 
 	return moviesList, nil
 }
+
 func (r *movieRepository) QueryContext(ctx context.Context, query string, args ...interface{}) (*sql.Rows, error) {
 	return r.db.QueryContext(ctx, query, args...)
 }

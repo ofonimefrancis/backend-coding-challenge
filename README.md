@@ -20,17 +20,17 @@ performance. 💪**
   dataset or API to populate the initial database.
 - [x] Implement user endpoints to create and view user information.
 - [x] Implement movie endpoints to create and view movie information.
-- [ ] Implement a rating system to rate the entertainment value of a movie.
-- [ ] Implement a basic profile where users can view their rated movies.
-- [ ] Include unit tests to ensure the reliability of your code.
+- [x] Implement a rating system to rate the entertainment value of a movie.
+- [x] Implement a basic profile where users can view their rated movies.
+- [x] Include unit tests to ensure the reliability of your code.
 - [x] Ensure proper error handling and validation of user inputs.
 
 ## ✨ Bonus Points
 
 - [ ] Implement authentication and authorization mechanisms for users.
 - [ ] Provide documentation for your API endpoints using tools like Swagger.
-- [ ] Implement logging to record errors and debug information.
-- [ ] Implement caching mechanisms to improve the rating system's performance.
+- [x] Implement logging to record errors and debug information.
+- [x] Implement caching mechanisms to improve the rating system's performance.
 - [ ] Implement CI/CD quality gates.
 
 ## 📋 Evaluation Criteria

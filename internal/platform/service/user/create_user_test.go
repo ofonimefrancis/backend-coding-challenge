@@ -16,7 +16,7 @@ func TestCreateUser(t *testing.T) {
 	tests := []struct {
 		name              string
 		req               users.CreateUserRequest
-		setupMocks        func(*MockUserRepository, *MockIDGenerator, *MockTimeProvider)
+		setupMocks        func(*MockUserRepository, *MockRatingRepository, *MockMovieRepository, *MockIDGenerator, *MockTimeProvider)
 		expectedUser      *users.User
 		expectedError     error
 		expectedErrorFunc func(*MockIDGenerator, *MockTimeProvider) error
@@ -30,7 +30,7 @@ func TestCreateUser(t *testing.T) {
 				Password:  "password123",
 				Role:      "user",
 			},
-			setupMocks: func(repo *MockUserRepository, idGen *MockIDGenerator, timeProv *MockTimeProvider) {
+			setupMocks: func(repo *MockUserRepository, ratingRepo *MockRatingRepository, movieRepo *MockMovieRepository, idGen *MockIDGenerator, timeProv *MockTimeProvider) {
 				idGen.On("Generate").Return("test-id")
 				timeProv.On("Now").Return(time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC))
 				repo.On("FindByEmail", mock.Anything, "john.doe@example.com").Return(nil, nil)
@@ -69,7 +69,7 @@ func TestCreateUser(t *testing.T) {
 				Password:  "password123",
 				Role:      "user",
 			},
-			setupMocks: func(repo *MockUserRepository, idGen *MockIDGenerator, timeProv *MockTimeProvider) {
+			setupMocks: func(repo *MockUserRepository, ratingRepo *MockRatingRepository, movieRepo *MockMovieRepository, idGen *MockIDGenerator, timeProv *MockTimeProvider) {
 				existingUser := &users.User{
 					ID:        "existing-id",
 					Email:     "existing@example.com",
@@ -90,7 +90,7 @@ func TestCreateUser(t *testing.T) {
 				Password:  "password123",
 				Role:      "invalid_role",
 			},
-			setupMocks: func(repo *MockUserRepository, idGen *MockIDGenerator, timeProv *MockTimeProvider) {
+			setupMocks: func(repo *MockUserRepository, ratingRepo *MockRatingRepository, movieRepo *MockMovieRepository, idGen *MockIDGenerator, timeProv *MockTimeProvider) {
 				repo.On("FindByEmail", mock.Anything, "invalid.role@example.com").Return(nil, nil)
 				timeProv.On("Now").Return(time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC))
 				idGen.On("Generate").Return("test-id")
@@ -118,7 +118,7 @@ func TestCreateUser(t *testing.T) {
 				Password:  "password123",
 				Role:      "user",
 			},
-			setupMocks: func(repo *MockUserRepository, idGen *MockIDGenerator, timeProv *MockTimeProvider) {
+			setupMocks: func(repo *MockUserRepository, ratingRepo *MockRatingRepository, movieRepo *MockMovieRepository, idGen *MockIDGenerator, timeProv *MockTimeProvider) {
 				idGen.On("Generate").Return("test-id")
 				timeProv.On("Now").Return(time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC))
 				repo.On("FindByEmail", mock.Anything, "error@example.com").Return(nil, nil)
@@ -133,10 +133,13 @@ func TestCreateUser(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Setup mocks
 			mockRepo := new(MockUserRepository)
+			mockRatingRepo := new(MockRatingRepository)
+			mockMovieRepo := new(MockMovieRepository)
 			mockIDGen := new(MockIDGenerator)
 			mockTimeProvider := new(MockTimeProvider)
-			tt.setupMocks(mockRepo, mockIDGen, mockTimeProvider)
-			service := NewUserService(mockRepo, mockIDGen, mockTimeProvider)
+			tt.setupMocks(mockRepo, mockRatingRepo, mockMovieRepo, mockIDGen, mockTimeProvider)
+
+			service := NewUserService(mockRepo, mockRatingRepo, mockMovieRepo, mockIDGen, mockTimeProvider, nil)
 			user, err := service.CreateUser(context.Background(), tt.req)
 
 			if tt.expectedErrorFunc != nil {
@@ -162,6 +165,8 @@ func TestCreateUser(t *testing.T) {
 			}
 
 			mockRepo.AssertExpectations(t)
+			mockRatingRepo.AssertExpectations(t)
+			mockMovieRepo.AssertExpectations(t)
 			mockIDGen.AssertExpectations(t)
 			mockTimeProvider.AssertExpectations(t)
 		})

@@ -1,0 +1,22 @@
+mode: set
+thermondo/internal/domain/rating/entity.go:37.20,48.42 2 1
+thermondo/internal/domain/rating/entity.go:48.42,50.3 1 1
+thermondo/internal/domain/rating/entity.go:52.2,52.20 1 1
+thermondo/internal/domain/rating/entity.go:55.35,56.20 1 1
+thermondo/internal/domain/rating/entity.go:56.20,58.3 1 1
+thermondo/internal/domain/rating/entity.go:60.2,60.21 1 1
+thermondo/internal/domain/rating/entity.go:60.21,62.3 1 1
+thermondo/internal/domain/rating/entity.go:64.2,64.32 1 1
+thermondo/internal/domain/rating/entity.go:64.32,66.3 1 1
+thermondo/internal/domain/rating/entity.go:68.2,68.12 1 1
+thermondo/internal/domain/rating/entity.go:71.81,72.28 1 1
+thermondo/internal/domain/rating/entity.go:72.28,74.3 1 1
+thermondo/internal/domain/rating/entity.go:76.2,78.12 3 1
+thermondo/internal/domain/rating/entity.go:81.86,85.2 3 1
+thermondo/internal/domain/rating/repository.go:16.43,23.2 1 0
+thermondo/internal/domain/rating/repository.go:27.40,28.35 1 0
+thermondo/internal/domain/rating/repository.go:28.35,30.3 1 0
+thermondo/internal/domain/rating/repository.go:33.42,34.35 1 0
+thermondo/internal/domain/rating/repository.go:34.35,36.3 1 0
+thermondo/internal/domain/rating/repository.go:39.50,40.35 1 0
+thermondo/internal/domain/rating/repository.go:40.35,43.3 2 0

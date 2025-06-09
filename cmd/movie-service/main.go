@@ -6,13 +6,16 @@ import (
 	"os"
 	"thermondo/config"
 	"thermondo/internal/domain/shared"
+	"thermondo/internal/pkg/cache"
 	"thermondo/internal/pkg/postgres"
 	"thermondo/internal/pkg/server"
 	movieHandlers "thermondo/internal/platform/http/handlers/movies"
+	ratingHandlers "thermondo/internal/platform/http/handlers/ratings"
 	userHandlers "thermondo/internal/platform/http/handlers/users"
 	"thermondo/internal/platform/http/rest"
 	"thermondo/internal/platform/repository"
 	movieService "thermondo/internal/platform/service/movies"
+	ratingService "thermondo/internal/platform/service/rating"
 	userService "thermondo/internal/platform/service/user"
 )
 
@@ -33,19 +36,45 @@ func main() {
 	}
 	defer db.Close()
 
+	// Determine environment
+	appEnv := os.Getenv("APP_ENV")
+	var c cache.Cache
+	if appEnv == "production" {
+		redisConfig := cache.RedisConfig{
+			Host:     cfg.Redis.Host,
+			Port:     6379, // Default Redis port
+			Password: cfg.Redis.Password,
+			DB:       cfg.Redis.DB,
+		}
+		c, err = cache.NewRedisCache(redisConfig, "thermondo")
+		if err != nil {
+			logger.Error("Failed to initialize Redis cache", slog.String("error", err.Error()))
+			os.Exit(1)
+		}
+		logger.Info("Using Redis cache")
+	} else {
+		c = cache.NewNoOpCache()
+		logger.Info("Using NoOp (in-memory) cache for non-production environment", slog.String("env", appEnv))
+	}
+	defer c.Close()
+
 	// Repositories
-	userRepo := repository.NewUserRepository(db)
+	userRepo := repository.NewUserRepository(db, c)
 	movieRepo := repository.NewMovieRepository(db)
+	ratingRepo := repository.NewRatingRepository(db)
 	idGenerator := shared.NewULIDsGenerator()
 	timeProvider := shared.NewTimeProvider()
 
 	// Services
-	userService := userService.NewUserService(userRepo, idGenerator, timeProvider)
+	userService := userService.NewUserService(userRepo, ratingRepo, movieRepo, idGenerator, timeProvider, c)
 	movieService := movieService.NewMovieService(movieRepo, idGenerator, timeProvider, logger)
+	ratingService := ratingService.NewRatingService(ratingRepo, idGenerator, timeProvider, logger)
 
 	// Handlers
 	userHandler := userHandlers.NewHandler(userService, logger)
 	movieHandler := movieHandlers.NewHandler(movieService, logger)
+	ratingHandler := ratingHandlers.NewHandler(ratingService, logger)
+	userProfileHandler := userHandlers.NewProfileHandler(userService, logger)
 
 	// Router with all handlers
 	appRouter := rest.NewRouter(
@@ -54,6 +83,8 @@ func main() {
 		rest.WithHandlers(
 			userHandler,
 			movieHandler,
+			ratingHandler,
+			userProfileHandler,
 		),
 	)
 

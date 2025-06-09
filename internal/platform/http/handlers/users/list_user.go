@@ -20,14 +20,14 @@ type Pagination struct {
 }
 
 type UserResponse struct {
-	ID        string    `json:"id"`
-	FirstName string    `json:"first_name"`
-	LastName  string    `json:"last_name"`
-	Email     string    `json:"email"`
-	Role      string    `json:"role"`
-	IsActive  bool      `json:"is_active"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
+	ID        string `json:"id"`
+	FirstName string `json:"first_name"`
+	LastName  string `json:"last_name"`
+	Email     string `json:"email"`
+	Role      string `json:"role"`
+	IsActive  bool   `json:"is_active"`
+	CreatedAt string `json:"created_at"`
+	UpdatedAt string `json:"updated_at"`
 }
 
 func (h *Handler) ListUsers(w http.ResponseWriter, r *http.Request) {
@@ -46,8 +46,8 @@ func (h *Handler) ListUsers(w http.ResponseWriter, r *http.Request) {
 			Email:     user.Email,
 			Role:      string(user.Role),
 			IsActive:  user.IsActive,
-			CreatedAt: user.CreatedAt,
-			UpdatedAt: user.UpdatedAt,
+			CreatedAt: user.CreatedAt.Format(time.RFC3339),
+			UpdatedAt: user.UpdatedAt.Format(time.RFC3339),
 		}
 
 		h.responseWriter.WriteSuccess(w, userResponse, http.StatusOK)
@@ -88,8 +88,8 @@ func (h *Handler) ListUsers(w http.ResponseWriter, r *http.Request) {
 			Email:     user.Email,
 			Role:      string(user.Role),
 			IsActive:  user.IsActive,
-			CreatedAt: user.CreatedAt,
-			UpdatedAt: user.UpdatedAt,
+			CreatedAt: user.CreatedAt.Format(time.RFC3339),
+			UpdatedAt: user.UpdatedAt.Format(time.RFC3339),
 		})
 	}
 

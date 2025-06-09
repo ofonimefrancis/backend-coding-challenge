@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"strings"
 	"thermondo/internal/domain/movies"
-	"thermondo/internal/domain/rating"
+	domainRating "thermondo/internal/domain/rating"
 	"thermondo/internal/domain/users"
 	"time"
 
@@ -18,11 +18,11 @@ type ratingRepository struct {
 	db *sqlx.DB
 }
 
-func NewRatingRepository(db *sqlx.DB) rating.Repository {
+func NewRatingRepository(db *sqlx.DB) domainRating.Repository {
 	return &ratingRepository{db: db}
 }
 
-func (r *ratingRepository) Save(ctx context.Context, rating *rating.Rating) (*rating.Rating, error) {
+func (r *ratingRepository) Save(ctx context.Context, rating *domainRating.Rating) (*domainRating.Rating, error) {
 	query := `
 		INSERT INTO ratings (id, user_id, movie_id, score, review, created_at, updated_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7)
@@ -45,14 +45,15 @@ func (r *ratingRepository) Save(ctx context.Context, rating *rating.Rating) (*ra
 	return savedRating, nil
 }
 
-func (r *ratingRepository) GetByID(ctx context.Context, id rating.RatingID) (*rating.Rating, error) {
+func (r *ratingRepository) GetByID(ctx context.Context, id domainRating.RatingID) (*domainRating.Rating, error) {
 	query := `
 		SELECT id, user_id, movie_id, score, review, created_at, updated_at
 		FROM ratings WHERE id = $1`
 
-	rating := &rating.Rating{}
+	rating := &domainRating.Rating{}
+	var rid, userID, movieID string
 	err := r.db.QueryRowContext(ctx, query, id).Scan(
-		&rating.ID, &rating.UserID, &rating.MovieID, &rating.Score,
+		&rid, &userID, &movieID, &rating.Score,
 		&rating.Review, &rating.CreatedAt, &rating.UpdatedAt,
 	)
 
@@ -63,15 +64,19 @@ func (r *ratingRepository) GetByID(ctx context.Context, id rating.RatingID) (*ra
 		return nil, fmt.Errorf("failed to get rating: %w", err)
 	}
 
+	rating.ID = domainRating.RatingID(strings.TrimSpace(rid))
+	rating.UserID = users.UserID(strings.TrimSpace(userID))
+	rating.MovieID = movies.MovieID(strings.TrimSpace(movieID))
+
 	return rating, nil
 }
 
-func (r *ratingRepository) GetByUserAndMovie(ctx context.Context, userID users.UserID, movieID movies.MovieID) (*rating.Rating, error) {
+func (r *ratingRepository) GetByUserAndMovie(ctx context.Context, userID users.UserID, movieID movies.MovieID) (*domainRating.Rating, error) {
 	query := `
 		SELECT id, user_id, movie_id, score, review, created_at, updated_at
 		FROM ratings WHERE user_id = $1 AND movie_id = $2`
 
-	rating := &rating.Rating{}
+	rating := &domainRating.Rating{}
 	err := r.db.QueryRowContext(ctx, query, userID, movieID).Scan(
 		&rating.ID, &rating.UserID, &rating.MovieID, &rating.Score,
 		&rating.Review, &rating.CreatedAt, &rating.UpdatedAt,
@@ -87,8 +92,8 @@ func (r *ratingRepository) GetByUserAndMovie(ctx context.Context, userID users.U
 	return rating, nil
 }
 
-func (r *ratingRepository) GetByUser(ctx context.Context, userID users.UserID, options ...rating.SearchOption) ([]*rating.Rating, error) {
-	opts := rating.DefaultSearchOptions()
+func (r *ratingRepository) GetByUser(ctx context.Context, userID users.UserID, options ...domainRating.SearchOption) ([]*domainRating.Rating, error) {
+	opts := domainRating.DefaultSearchOptions()
 	for _, option := range options {
 		option(&opts)
 	}
@@ -103,8 +108,8 @@ func (r *ratingRepository) GetByUser(ctx context.Context, userID users.UserID, o
 	return r.queryRatings(ctx, query, userID, opts.Limit, opts.Offset)
 }
 
-func (r *ratingRepository) GetByMovie(ctx context.Context, movieID movies.MovieID, options ...rating.SearchOption) ([]*rating.Rating, error) {
-	opts := rating.DefaultSearchOptions()
+func (r *ratingRepository) GetByMovie(ctx context.Context, movieID movies.MovieID, options ...domainRating.SearchOption) ([]*domainRating.Rating, error) {
+	opts := domainRating.DefaultSearchOptions()
 	for _, option := range options {
 		option(&opts)
 	}
@@ -119,7 +124,7 @@ func (r *ratingRepository) GetByMovie(ctx context.Context, movieID movies.MovieI
 	return r.queryRatings(ctx, query, movieID, opts.Limit, opts.Offset)
 }
 
-func (r *ratingRepository) Update(ctx context.Context, rating *rating.Rating) (*rating.Rating, error) {
+func (r *ratingRepository) Update(ctx context.Context, rating *domainRating.Rating) (*domainRating.Rating, error) {
 	query := `
 		UPDATE ratings SET
 			score = $2, review = $3, updated_at = $4
@@ -143,7 +148,7 @@ func (r *ratingRepository) Update(ctx context.Context, rating *rating.Rating) (*
 	return rating, nil
 }
 
-func (r *ratingRepository) Delete(ctx context.Context, id rating.RatingID) error {
+func (r *ratingRepository) Delete(ctx context.Context, id domainRating.RatingID) error {
 	query := `DELETE FROM ratings WHERE id = $1`
 
 	result, err := r.db.ExecContext(ctx, query, id)
@@ -163,7 +168,7 @@ func (r *ratingRepository) Delete(ctx context.Context, id rating.RatingID) error
 	return nil
 }
 
-func (r *ratingRepository) GetMovieStats(ctx context.Context, movieID movies.MovieID) (*rating.MovieRatingStats, error) {
+func (r *ratingRepository) GetMovieStats(ctx context.Context, movieID movies.MovieID) (*domainRating.MovieRatingStats, error) {
 	query := `
 		SELECT 
 			ROUND(AVG(score::decimal), 2) as average_score,
@@ -181,7 +186,7 @@ func (r *ratingRepository) GetMovieStats(ctx context.Context, movieID movies.Mov
 	}
 	defer rows.Close()
 
-	stats := &rating.MovieRatingStats{
+	stats := &domainRating.MovieRatingStats{
 		MovieID:    movieID,
 		ScoreCount: make(map[int]int64),
 	}
@@ -212,7 +217,7 @@ func (r *ratingRepository) GetMovieStats(ctx context.Context, movieID movies.Mov
 	return stats, nil
 }
 
-func (r *ratingRepository) Exists(ctx context.Context, id rating.RatingID) (bool, error) {
+func (r *ratingRepository) Exists(ctx context.Context, id domainRating.RatingID) (bool, error) {
 	query := `SELECT EXISTS(SELECT 1 FROM ratings WHERE id = $1)`
 
 	var exists bool
@@ -269,23 +274,28 @@ func (r *ratingRepository) getSortColumn(sortBy string) string {
 	}
 }
 
-func (r *ratingRepository) queryRatings(ctx context.Context, query string, args ...interface{}) ([]*rating.Rating, error) {
+func (r *ratingRepository) queryRatings(ctx context.Context, query string, args ...interface{}) ([]*domainRating.Rating, error) {
 	rows, err := r.db.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query ratings: %w", err)
 	}
 	defer rows.Close()
 
-	var ratingsList []*rating.Rating
+	var ratingsList []*domainRating.Rating
 	for rows.Next() {
-		rating := &rating.Rating{}
+		rating := &domainRating.Rating{}
+		var id, userID, movieID string
 		err := rows.Scan(
-			&rating.ID, &rating.UserID, &rating.MovieID, &rating.Score,
+			&id, &userID, &movieID, &rating.Score,
 			&rating.Review, &rating.CreatedAt, &rating.UpdatedAt,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan rating: %w", err)
 		}
+		// Trim any padding from the IDs
+		rating.ID = domainRating.RatingID(strings.TrimSpace(id))
+		rating.UserID = users.UserID(strings.TrimSpace(userID))
+		rating.MovieID = movies.MovieID(strings.TrimSpace(movieID))
 		ratingsList = append(ratingsList, rating)
 	}
 

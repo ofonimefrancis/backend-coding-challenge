@@ -3,7 +3,6 @@ package user
 import (
 	"context"
 	"thermondo/internal/domain/users"
-	"thermondo/internal/pkg/interfaces"
 )
 
 type UserFilters struct {
@@ -19,24 +18,11 @@ type UserService interface {
 	FindUserByID(ctx context.Context, id string) (*users.User, error)
 	FindUserByEmail(ctx context.Context, email string) (*users.User, error)
 	ListUsers(ctx context.Context, page, limit int) ([]*users.User, int, error)
-}
 
-type userService struct {
-	userRepository users.UserRepository
-	idGenerator    interfaces.IDGenerator
-	timeProvider   interfaces.TimeProvider
-}
-
-func NewUserService(
-	userRepository users.UserRepository,
-	idGenerator interfaces.IDGenerator,
-	timeProvider interfaces.TimeProvider,
-) UserService {
-	return &userService{
-		userRepository: userRepository,
-		idGenerator:    idGenerator,
-		timeProvider:   timeProvider,
-	}
+	// User profile
+	GetUserProfile(ctx context.Context, req UserProfileRequest) ([]*UserRatingWithMovie, *UserProfileStats, error)
+	GetUserStats(ctx context.Context, userID string) (*UserProfileStats, error)
+	InvalidateUserCache(ctx context.Context, userID string) error
 }
 
 func (s *userService) CreateUser(ctx context.Context, user users.CreateUserRequest) (*users.User, error) {

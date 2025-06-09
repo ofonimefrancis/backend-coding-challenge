@@ -325,8 +325,18 @@ func (h *Handler) handleServiceError(w http.ResponseWriter, err error) {
 		return
 	}
 
-	h.logger.Error("Unexpected service error", "error", err)
-	h.responseWriter.WriteError(w, "Internal server error", http.StatusInternalServerError)
+	// Handle specific error types
+	switch {
+	case errors.Is(err, rating.ErrInvalidScore):
+		h.logger.Error("Invalid score", "error", err)
+		h.responseWriter.WriteError(w, err.Error(), http.StatusBadRequest)
+	case errors.Is(err, rating.ErrEmptyUserID), errors.Is(err, rating.ErrEmptyMovieID):
+		h.logger.Error("Missing required field", "error", err)
+		h.responseWriter.WriteError(w, err.Error(), http.StatusBadRequest)
+	default:
+		h.logger.Error("Unexpected service error", "error", err)
+		h.responseWriter.WriteError(w, err.Error(), http.StatusInternalServerError)
+	}
 }
 
 func (h *Handler) RegisterRoutes(router chi.Router) {

@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"fmt"
+	"strings"
 	"thermondo/internal/domain/movies"
 )
 
@@ -30,8 +31,9 @@ func (r *movieRepository) queryMovies(ctx context.Context, query string, args ..
 	var moviesList []*movies.Movie
 	for rows.Next() {
 		movie := &movies.Movie{}
+		var id string
 		err := rows.Scan(
-			&movie.ID, &movie.Title, &movie.Description, &movie.ReleaseYear,
+			&id, &movie.Title, &movie.Description, &movie.ReleaseYear,
 			&movie.Genre, &movie.Director, &movie.DurationMins, &movie.Rating,
 			&movie.Language, &movie.Country, &movie.Budget, &movie.Revenue,
 			&movie.IMDbID, &movie.PosterURL, &movie.CreatedAt, &movie.UpdatedAt,
@@ -39,6 +41,8 @@ func (r *movieRepository) queryMovies(ctx context.Context, query string, args ..
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan movie: %w", err)
 		}
+		// Trim any padding from the ID
+		movie.ID = movies.MovieID(strings.TrimSpace(id))
 		moviesList = append(moviesList, movie)
 	}
 
