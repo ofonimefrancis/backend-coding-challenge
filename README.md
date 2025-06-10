@@ -74,7 +74,7 @@ performance. 💪**
    ```
 3. Build and start the containers:
    ```bash
-   docker-compose up --build
+   docker-compose up -d
    ```
    This will start:
    - PostgreSQL database on port 5432
